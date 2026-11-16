@@ -1,0 +1,53 @@
+{
+  "probe": "dashboard_runtime_fixes",
+  "ts": 1794215407.018348,
+  "symptoms": [
+    "看板角标 LLM 恒离线",
+    "可视化分析无检测框、读取帧数等统计为 '-'",
+    "看板卡顿"
+  ],
+  "root_causes": [
+    {
+      "id": "llm_probe_attr",
+      "detail": "engine.llm_online() 读取 self.vllm_url，但 InferenceEngine 未定义该属性（只在各子组件里）→ AttributeError 被 except 吞掉 → 恒 false"
+    },
+    {
+      "id": "llm_probe_ipv6",
+      "detail": "vllm_url 用 localhost，盒上优先解析 ::1，llama-server 只监听 127.0.0.1 → 探测失败"
+    },
+    {
+      "id": "npu_smi_storm",
+      "detail": "npu_telemetry.read() 每次 3 个 npu-smi 子进程（单次 0.3–0.6s），1s 轮询 × 角标 + MQTT + 看板并发 → /api/v1/metrics 实测 6–11s，事件循环被拖慢，任务起流/推送延迟"
+    }
+  ],
+  "fixes": [
+    "llm_online() 改为取 vlm_reviewer.vllm_url 并归一化 localhost→127.0.0.1；REST /api/v1/metrics 也走同一探测（60s 缓存）",
+    "npu_telemetry.read() 改为单次 `npu-smi info`（总表已含功耗/温度/AICore），仅在解析不到 power_w 时回退 board/usages；TTL 1s→2s；加线程锁防并发风暴"
+  ],
+  "verification": {
+    "metrics_after": {
+      "power_w": 7.3,
+      "temp_c": 48,
+      "llm_online": true,
+      "elapsed_s": 0.0043
+    },
+    "metrics_before_s": [
+      6.07,
+      7.12,
+      6.3,
+      10.86
+    ],
+    "ws_detections": {
+      "frames_sampled": 8,
+      "detections_per_frame": 3,
+      "detection_keys": [
+        "bbox",
+        "behavior",
+        "pose_keypoints",
+        "track_id"
+      ],
+      "first_push_s": 7.1
+    }
+  },
+  "verdict": "FIXED"
+}

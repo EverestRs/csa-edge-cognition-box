@@ -1,0 +1,26 @@
+{
+  "probe": "bench_edge",
+  "ts": 1793860554.8512993,
+  "profile": "edge",
+  "video": "../test/whole_process_corner_3.mp4",
+  "frames": 300,
+  "wall_s": 31.09,
+  "fps": 9.65,
+  "latency_ms_p50": 65.9,
+  "latency_ms_p95": 86.9,
+  "latency_ms_mean": 82.7,
+  "stage_ms_mean": {
+    "detector": 64.98,
+    "pose": 12.97,
+    "action": 0.74,
+    "post": 2.51
+  },
+  "model_load": {
+    "detector": true,
+    "pose": true,
+    "action": false,
+    "pose_classifier": true,
+    "decision_mode": "edge",
+    "crop_arbiter": true
+  }
+}

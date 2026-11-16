@@ -1,0 +1,19 @@
+{
+  "probe": "edge_engine_smoke",
+  "ts": 1793852963.6281867,
+  "checks": {
+    "profile_edge": true,
+    "engine_edge_mode": true,
+    "crop_loaded": true,
+    "detector_backend_degraded": true,
+    "detector_session_alive": true,
+    "pose_session_alive": true,
+    "frames_processed": 120,
+    "frames_with_traces": 0,
+    "crop_arbiter_steps": 0,
+    "latency_ms_p50": 568.7,
+    "throughput_fps": 1.68
+  },
+  "sample_traces": [],
+  "verdict": "PASS_NO_TRACE"
+}

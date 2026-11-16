@@ -1,0 +1,33 @@
+{
+ "meta": {
+  "ts": "2026-11-11 14:40:39",
+  "model": "yolov8n.om",
+  "input": [
+   1,
+   3,
+   640,
+   640
+  ],
+  "duration_s": 12.0,
+  "method": "独占 NPU 紧循环 adapter.run（隔离 CPU/系统争用）"
+ },
+ "npu_throughput_fps": 60.3,
+ "frames": 723,
+ "latency_ms": {
+  "p50": 16.25,
+  "p95": 17.19,
+  "max": 27.96,
+  "mean": 16.58
+ },
+ "output_shape": [
+  1,
+  84,
+  8400
+ ],
+ "resources": {
+  "ai_core_pct_avg": 43.9,
+  "ai_core_pct_max": 48,
+  "power_w_avg": 8.9,
+  "temp_c_max": 50
+ }
+}

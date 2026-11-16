@@ -1,0 +1,92 @@
+{
+  "probe": "mqtt_usb_network_demo",
+  "ts": 1794210222.2059634,
+  "network": {
+    "iface": "usb0",
+    "box_ip": "192.168.137.2/24",
+    "host_ip": "192.168.137.1",
+    "note": "USB RNDIS/ECM gadget；MQTT/HTTP 均走该链路，无需 WiFi"
+  },
+  "broker": {
+    "impl": "mosquitto 2.0.11 (debs 免 sudo 解包到 ~/mosq/prefix)",
+    "config": "listener 1883 0.0.0.0; allow_anonymous true; persistence false",
+    "pid_extract": true
+  },
+  "topics": {
+    "status_count": 13,
+    "event_count": 12,
+    "rule_set_ack": [
+      {
+        "rule_id": "demo_mqtt_rule",
+        "applied": true,
+        "ts": 1794210069.7550085
+      }
+    ]
+  },
+  "status_sample": {
+    "box_id": "edge1",
+    "ts": 1794210182.4841845,
+    "decision_mode": "edge",
+    "persons": 3,
+    "power_w": 8.5,
+    "temp_c": 48,
+    "ai_core_util_pct": 0.0,
+    "llm_online": false
+  },
+  "event_samples": [
+    {
+      "event_id": "evt_1",
+      "frame_id": 1,
+      "type": "nl_rule_hit",
+      "source": "nl_rule",
+      "label": "M01",
+      "confidence": 0.72,
+      "final_decision": "pending",
+      "rule_id": "rule_0006",
+      "rule_text": "告警有人吸烟",
+      "ts": 1794210123.6730893
+    },
+    {
+      "event_id": "evt_1",
+      "frame_id": 1,
+      "type": "nl_rule_hit",
+      "source": "nl_rule",
+      "label": "M01",
+      "confidence": 0.72,
+      "final_decision": "pending",
+      "rule_id": "rule_0008",
+      "rule_text": "告警有人吸烟",
+      "ts": 1794210123.6780562
+    },
+    {
+      "event_id": "evt_12",
+      "frame_id": 12,
+      "type": "nl_rule_hit",
+      "source": "nl_rule",
+      "label": "M01",
+      "confidence": 0.72,
+      "final_decision": "pending",
+      "rule_id": "rule_0006",
+      "rule_text": "告警有人吸烟",
+      "ts": 1794210134.4362469
+    }
+  ],
+  "rule_set_test": {
+    "sent": {
+      "rule_id": "demo_mqtt_rule",
+      "text": "告警有人吸烟"
+    },
+    "ack": {
+      "rule_id": "demo_mqtt_rule",
+      "applied": true,
+      "ts": 1794210069.7550085
+    }
+  },
+  "verdict": "PASS",
+  "notes": [
+    "status 含真实 npu-smi 功耗/温度与人数",
+    "event 由 rule_0006（吸烟）闭集命中触发，QoS1 上行",
+    "下行 rule/set 经 LLM 解析后 ack；演示产生的重复规则 rule_0008 已删除",
+    "SQL/看板侧仅需订阅 csa/#，可运行在主机浏览器（192.168.137.2:8501）"
+  ]
+}

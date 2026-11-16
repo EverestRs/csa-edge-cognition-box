@@ -1,0 +1,32 @@
+{
+ "mode": "multiprocess",
+ "channels": 2,
+ "per_channel": [
+  {
+   "channel": 0,
+   "fed": 400,
+   "decoded": 391,
+   "feed_wall": 1.02
+  },
+  {
+   "channel": 1,
+   "fed": 400,
+   "decoded": 393,
+   "feed_wall": 1.075
+  }
+ ],
+ "channels_succeeded": 2,
+ "total_decoded_frames": 784,
+ "concurrent_wall_s": 2.876,
+ "aggregate_fps": 272.6,
+ "per_channel_fps": [
+  383.3,
+  365.6
+ ],
+ "src": "../data/540p/whole_process_corner_1.mp4",
+ "size": [
+  960,
+  540
+ ],
+ "frames_per_channel": 400
+}

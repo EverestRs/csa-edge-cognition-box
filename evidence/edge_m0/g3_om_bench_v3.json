@@ -1,0 +1,23 @@
+{
+  "probe": "g3_om_infer",
+  "ts": 1793860459.9187438,
+  "om": "models/detector/yolov8n.om",
+  "shape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "status": "OK",
+  "om_ms_p50": 22.686702000100922,
+  "om_ms_p95": 27.522402250087907,
+  "output_shapes": [
+    [
+      1,
+      84,
+      8400
+    ]
+  ],
+  "max_rel_err_vs_ort": 0.00339,
+  "parity_pass": true
+}

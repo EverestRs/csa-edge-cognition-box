@@ -1,0 +1,123 @@
+{
+  "probe": "engine_rtsp_e2e",
+  "ts": 1794205138.7359517,
+  "env": {
+    "profile": "edge",
+    "source": "rtsp://127.0.0.1:8554/live",
+    "source_content": "data/laying_corner_1-1.mp4 via gst-rtsp relay (h264 passthrough)",
+    "source_backend": "auto->cv",
+    "resolution": "1920x1080@30",
+    "max_fps": 6,
+    "frame_stride": 4
+  },
+  "baseline_task": {
+    "task_id": "task_0d489306",
+    "requested_duration_s": 15,
+    "status": "finished",
+    "read_frames": 448,
+    "inference_frames": 300,
+    "engine_process_frames": 26,
+    "replayed_frames": 282,
+    "encoded_frames": 152,
+    "pushed_frames": 152,
+    "dropped_frames_decode": 108,
+    "dropped_frames_result": 2,
+    "note": "端到端 pipeline 跑通；取流被 6fps 处理节拍反压，read 速率≈6–8fps；h264 解码告警来自 relay 分包，无帧缺失"
+  },
+  "long_drop_test": {
+    "task_id": "task_1b4fb677",
+    "kill_at_s": 8.18,
+    "restart_at_s": 20.22,
+    "snapshots": [
+      {
+        "phase": "baseline",
+        "t": 8.04,
+        "status": "running",
+        "last_frame": 8,
+        "read_frames": 63,
+        "inference_frames": 16,
+        "engine_process_frames": 3,
+        "dropped_frames_decode": 18
+      },
+      {
+        "phase": "stream_down",
+        "t": 20.2,
+        "status": "finished",
+        "last_frame": 94,
+        "read_frames": 94,
+        "inference_frames": 30,
+        "engine_process_frames": 4,
+        "dropped_frames_decode": 38
+      },
+      {
+        "phase": "after_restart",
+        "t": 40.24,
+        "status": "finished",
+        "last_frame": 94,
+        "read_frames": 94,
+        "inference_frames": 30,
+        "engine_process_frames": 4,
+        "dropped_frames_decode": 38
+      }
+    ],
+    "final": {
+      "t": 43.26,
+      "status": "stopped",
+      "last_frame": 94,
+      "read_frames": 94,
+      "inference_frames": 30,
+      "engine_process_frames": 4,
+      "dropped_frames_decode": 38
+    },
+    "finding": "断流超时 > 单次重连窗口(≈2s)：视频流重连只尝试一次，失败后 reader 线程退出，任务标记 finished（非 failed），relay 恢复后不会续流"
+  },
+  "quick_drop_test": {
+    "task_id": "task_903952d9",
+    "kill_at_s": 7.21,
+    "restart_at_s": 7.23,
+    "snapshots": [
+      {
+        "phase": "baseline",
+        "t": 7.04,
+        "status": "running",
+        "last_frame": 8,
+        "read_frames": 44,
+        "inference_frames": 14,
+        "engine_process_frames": 3
+      },
+      {
+        "phase": "t+15s",
+        "t": 22.25,
+        "status": "running",
+        "last_frame": 140,
+        "read_frames": 142,
+        "inference_frames": 88,
+        "engine_process_frames": 9
+      },
+      {
+        "phase": "t+25s",
+        "t": 32.27,
+        "status": "running",
+        "last_frame": 220,
+        "read_frames": 220,
+        "inference_frames": 146,
+        "engine_process_frames": 14
+      }
+    ],
+    "final": {
+      "t": 34.72,
+      "status": "stopped",
+      "last_frame": 220,
+      "read_frames": 220,
+      "inference_frames": 146,
+      "engine_process_frames": 14
+    },
+    "finding": "断流后源快速恢复：自动重连成功，read_frames 44→142→220 连续增长，任务保持 running"
+  },
+  "decode_warnings": {
+    "h264_error_lines": 65,
+    "source": "gst relay 未带 h264parse（videoparsersbad 缺失）导致的分包告警"
+  },
+  "verdict": "E2E_PASS_WITH_RECONNECT_GAP",
+  "conclusion": "取流→检测→推送全链路在 RTSP 源可用；≤2s 抖动可自愈，>2s 断流会导致任务提前结束，演示前需补重试逻辑"
+}

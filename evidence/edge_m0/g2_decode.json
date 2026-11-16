@@ -1,0 +1,28 @@
+{
+  "probe": "g2_decode",
+  "ts": 1790844457.4484057,
+  "source": "testsrc",
+  "resolution": [
+    1280,
+    720
+  ],
+  "cases": {
+    "cv": {
+      "status": "FAIL",
+      "reason": "cv_open_failed: testsrc",
+      "pass": false
+    },
+    "ffmpeg": {
+      "status": "OK",
+      "backend": "ffmpeg",
+      "frames_read": 60,
+      "frames_requested": 60,
+      "decode_ms_p50": 33.00540614873171,
+      "decode_ms_p95": 34.50594381429255,
+      "decode_fps": 32.76,
+      "cpu_cores_avg": 0.1,
+      "pass": true
+    }
+  },
+  "verdict": "PASS"
+}

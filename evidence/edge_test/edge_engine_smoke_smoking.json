@@ -1,0 +1,23 @@
+{
+  "probe": "edge_engine_smoke",
+  "ts": 1791030257.032864,
+  "checks": {
+    "profile_edge": true,
+    "engine_edge_mode": true,
+    "crop_loaded": true,
+    "detector_backend_degraded": true,
+    "detector_session_alive": true,
+    "pose_session_alive": true,
+    "frames_processed": 240,
+    "frames_with_traces": 38,
+    "crop_arbiter_steps": 50,
+    "latency_ms_p50": 35.6,
+    "throughput_fps": 20.64
+  },
+  "sample_traces": [
+    "P001 f6: 主路径 M01(0.72) → Crop复核 Wave(0.16) → 定论 M01(0.72)",
+    "P003 f6: 主路径 M01(0.72) → Crop复核 Wave(0.16) → 定论 M01(0.72)",
+    "P001 f16: 主路径 Normal(0.00) → 定论 M01(0.72)"
+  ],
+  "verdict": "PASS"
+}

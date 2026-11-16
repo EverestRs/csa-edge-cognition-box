@@ -1,0 +1,1386 @@
+{
+ "meta": {
+  "ts": "2026-11-11 14:18:34",
+  "task_id": "task_ef67bf9d",
+  "profile": "throughput",
+  "source": "rtsp://127.0.0.1:8554/live",
+  "duration_s": 40,
+  "method": "管道计数器差分(推理fps) + WS逐帧detector延迟 + npu-smi采样 + psutil"
+ },
+ "pipeline": {
+  "read_fps": 21.93,
+  "inference_fps": 0.45,
+  "engine_process_fps": 0.45,
+  "encoded_fps": 0.19,
+  "pushed_fps": 0.19,
+  "dropped_decode": 917,
+  "dropped_result": 0,
+  "stage_b_inference_avg_ms": 1739.832,
+  "stage_ms_final": {
+   "stage_a_decode": {
+    "avg_ms": 32.678,
+    "max_ms": 1451.701,
+    "count": 1064
+   },
+   "stage_b_inference": {
+    "avg_ms": 1739.832,
+    "max_ms": 3764.509,
+    "count": 20
+   },
+   "stage_c_encode": {
+    "avg_ms": 0.027,
+    "max_ms": 0.036,
+    "count": 9
+   },
+   "stage_d_push": {
+    "avg_ms": 0.172,
+    "max_ms": 0.202,
+    "count": 8,
+    "sleep_ms_total": 0.0
+   }
+  },
+  "profile": {
+   "max_fps": 30.0,
+   "frame_stride": 1,
+   "push_stride": 3,
+   "detector_stride": null,
+   "source_fps": 30.0
+  }
+ },
+ "detector_latency_ms": {
+  "p50": 1148.04,
+  "p95": 2919.68,
+  "max": 2919.68,
+  "samples": 10
+ },
+ "ws_view": {
+  "events": 10,
+  "span_s": 38.7,
+  "push_event_fps": 0.26,
+  "frames_with_boxes": 10,
+  "box_coverage": 1.0,
+  "dets_avg": 3.0,
+  "alert_events": 0
+ },
+ "resources": {
+  "npu_ai_core_pct_avg": 0.0,
+  "npu_ai_core_pct_max": 0,
+  "power_w_avg": 8.48,
+  "power_w_max": 8.6,
+  "temp_c_max": 50,
+  "npu_mem_used_mb_max": 3423,
+  "engine_cpu_pct_avg": 173.0,
+  "system_cpu_pct_avg": 70.9,
+  "loadavg": [
+   21.75732421875,
+   19.1552734375,
+   18.40478515625
+  ]
+ },
+ "samples": [
+  {
+   "t": 17223.56,
+   "stats": {},
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 0,
+    "fps": null,
+    "mem_mb": 1392.8,
+    "power_w": 8.0,
+    "temp_c": 48,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377869.3816743
+   },
+   "npu": {
+    "power_w": 8.1,
+    "temp_c": 48,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3370,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 0.0,
+   "engine_cpu_pct": 152.8
+  },
+  {
+   "t": 17226.79,
+   "stats": {},
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 0,
+    "fps": null,
+    "mem_mb": 1451.7,
+    "power_w": 8.1,
+    "temp_c": 48,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377871.8407521
+   },
+   "npu": {
+    "power_w": 8.2,
+    "temp_c": 48,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3400,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.1,
+   "engine_cpu_pct": 224.5
+  },
+  {
+   "t": 17229.31,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.28,
+    "pushed_fps": 0.28,
+    "read_frames": 128,
+    "inference_frames": 1,
+    "engine_process_frames": 1,
+    "replayed_frames": 0,
+    "encoded_frames": 1,
+    "pushed_frames": 1,
+    "last_processed_frame_id": 1,
+    "dropped_frames_decode": 125,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 0,
+     "action_skip_gate_total": 0,
+     "action_skip_cached_total": 0,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 28.118,
+      "max_ms": 1451.701,
+      "count": 128
+     },
+     "stage_b_inference": {
+      "avg_ms": 3578.957,
+      "max_ms": 3578.957,
+      "count": 1
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.027,
+      "max_ms": 0.027,
+      "count": 1
+     },
+     "stage_d_push": {
+      "avg_ms": 0.0,
+      "max_ms": 0.0,
+      "count": 0,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.28,
+    "mem_mb": 1446.0,
+    "power_w": 8.4,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377874.3635137
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3397,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 74.8,
+   "engine_cpu_pct": 224.9
+  },
+  {
+   "t": 17231.83,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.56,
+    "pushed_fps": 0.42,
+    "read_frames": 232,
+    "inference_frames": 4,
+    "engine_process_frames": 4,
+    "replayed_frames": 0,
+    "encoded_frames": 3,
+    "pushed_frames": 3,
+    "last_processed_frame_id": 198,
+    "dropped_frames_decode": 226,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 2,
+     "action_skip_cached_total": 6,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 30.423,
+      "max_ms": 1451.701,
+      "count": 232
+     },
+     "stage_b_inference": {
+      "avg_ms": 1762.281,
+      "max_ms": 3578.957,
+      "count": 4
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.025,
+      "max_ms": 0.027,
+      "count": 3
+     },
+     "stage_d_push": {
+      "avg_ms": 0.158,
+      "max_ms": 0.158,
+      "count": 2,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.56,
+    "mem_mb": 1460.2,
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377876.8802211
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3409,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.3,
+   "engine_cpu_pct": 228.6
+  },
+  {
+   "t": 17234.34,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.61,
+    "pushed_fps": 0.49,
+    "read_frames": 267,
+    "inference_frames": 5,
+    "engine_process_frames": 5,
+    "replayed_frames": 0,
+    "encoded_frames": 4,
+    "pushed_frames": 4,
+    "last_processed_frame_id": 231,
+    "dropped_frames_decode": 260,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 4,
+     "action_skip_cached_total": 9,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 30.817,
+      "max_ms": 1451.701,
+      "count": 267
+     },
+     "stage_b_inference": {
+      "avg_ms": 1643.087,
+      "max_ms": 3578.957,
+      "count": 5
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.028,
+      "max_ms": 0.036,
+      "count": 4
+     },
+     "stage_d_push": {
+      "avg_ms": 0.159,
+      "max_ms": 0.161,
+      "count": 3,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.61,
+    "mem_mb": 1466.3,
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377879.3887048
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3415,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.3,
+   "engine_cpu_pct": 226.8
+  },
+  {
+   "t": 17236.85,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.61,
+    "pushed_fps": 0.49,
+    "read_frames": 267,
+    "inference_frames": 5,
+    "engine_process_frames": 5,
+    "replayed_frames": 0,
+    "encoded_frames": 4,
+    "pushed_frames": 4,
+    "last_processed_frame_id": 231,
+    "dropped_frames_decode": 260,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 4,
+     "action_skip_cached_total": 9,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 30.817,
+      "max_ms": 1451.701,
+      "count": 267
+     },
+     "stage_b_inference": {
+      "avg_ms": 1643.087,
+      "max_ms": 3578.957,
+      "count": 5
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.028,
+      "max_ms": 0.036,
+      "count": 4
+     },
+     "stage_d_push": {
+      "avg_ms": 0.159,
+      "max_ms": 0.161,
+      "count": 3,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.61,
+    "mem_mb": 1471.2,
+    "power_w": 8.5,
+    "temp_c": 50,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377881.9004521
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3419,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.1,
+   "engine_cpu_pct": 216.7
+  },
+  {
+   "t": 17239.36,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.68,
+    "pushed_fps": 0.34,
+    "read_frames": 459,
+    "inference_frames": 10,
+    "engine_process_frames": 10,
+    "replayed_frames": 0,
+    "encoded_frames": 5,
+    "pushed_frames": 5,
+    "last_processed_frame_id": 414,
+    "dropped_frames_decode": 446,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 6,
+     "action_skip_cached_total": 12,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 31.845,
+      "max_ms": 1451.701,
+      "count": 459
+     },
+     "stage_b_inference": {
+      "avg_ms": 1459.961,
+      "max_ms": 3578.957,
+      "count": 10
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.028,
+      "max_ms": 0.036,
+      "count": 5
+     },
+     "stage_d_push": {
+      "avg_ms": 0.162,
+      "max_ms": 0.171,
+      "count": 4,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.68,
+    "mem_mb": 1477.2,
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377884.4223802
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3415,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.3,
+   "engine_cpu_pct": 213.4
+  },
+  {
+   "t": 17241.9,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.68,
+    "pushed_fps": 0.34,
+    "read_frames": 459,
+    "inference_frames": 10,
+    "engine_process_frames": 10,
+    "replayed_frames": 0,
+    "encoded_frames": 5,
+    "pushed_frames": 5,
+    "last_processed_frame_id": 414,
+    "dropped_frames_decode": 446,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 6,
+     "action_skip_cached_total": 12,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 31.845,
+      "max_ms": 1451.701,
+      "count": 459
+     },
+     "stage_b_inference": {
+      "avg_ms": 1459.961,
+      "max_ms": 3578.957,
+      "count": 10
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.028,
+      "max_ms": 0.036,
+      "count": 5
+     },
+     "stage_d_push": {
+      "avg_ms": 0.162,
+      "max_ms": 0.171,
+      "count": 4,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.68,
+    "mem_mb": 1503.5,
+    "power_w": 8.6,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377886.949159
+   },
+   "npu": {
+    "power_w": 8.6,
+    "temp_c": 48,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3420,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.3,
+   "engine_cpu_pct": 223.9
+  },
+  {
+   "t": 17244.35,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.72,
+    "pushed_fps": 0.31,
+    "read_frames": 607,
+    "inference_frames": 14,
+    "engine_process_frames": 14,
+    "replayed_frames": 0,
+    "encoded_frames": 6,
+    "pushed_frames": 6,
+    "last_processed_frame_id": 573,
+    "dropped_frames_decode": 590,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 8,
+     "action_skip_cached_total": 15,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.201,
+      "max_ms": 1451.701,
+      "count": 606
+     },
+     "stage_b_inference": {
+      "avg_ms": 1395.665,
+      "max_ms": 3578.957,
+      "count": 14
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.028,
+      "max_ms": 0.036,
+      "count": 6
+     },
+     "stage_d_push": {
+      "avg_ms": 0.17,
+      "max_ms": 0.202,
+      "count": 5,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.72,
+    "mem_mb": 1506.5,
+    "power_w": 8.6,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377889.4088187
+   },
+   "npu": {
+    "power_w": 8.6,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3423,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.1,
+   "engine_cpu_pct": 226.0
+  },
+  {
+   "t": 17246.87,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.72,
+    "pushed_fps": 0.31,
+    "read_frames": 607,
+    "inference_frames": 14,
+    "engine_process_frames": 14,
+    "replayed_frames": 0,
+    "encoded_frames": 6,
+    "pushed_frames": 6,
+    "last_processed_frame_id": 573,
+    "dropped_frames_decode": 590,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 8,
+     "action_skip_cached_total": 15,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.201,
+      "max_ms": 1451.701,
+      "count": 606
+     },
+     "stage_b_inference": {
+      "avg_ms": 1395.665,
+      "max_ms": 3578.957,
+      "count": 14
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.028,
+      "max_ms": 0.036,
+      "count": 6
+     },
+     "stage_d_push": {
+      "avg_ms": 0.17,
+      "max_ms": 0.202,
+      "count": 5,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.72,
+    "mem_mb": 1508.1,
+    "power_w": 8.6,
+    "temp_c": 50,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377892.1502407
+   },
+   "npu": {
+    "power_w": 8.6,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3411,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.3,
+   "engine_cpu_pct": 136.3
+  },
+  {
+   "t": 17249.6,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.68,
+    "pushed_fps": 0.3,
+    "read_frames": 728,
+    "inference_frames": 16,
+    "engine_process_frames": 16,
+    "replayed_frames": 0,
+    "encoded_frames": 7,
+    "pushed_frames": 7,
+    "last_processed_frame_id": 642,
+    "dropped_frames_decode": 710,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 10,
+     "action_skip_cached_total": 18,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.384,
+      "max_ms": 1451.701,
+      "count": 728
+     },
+     "stage_b_inference": {
+      "avg_ms": 1473.639,
+      "max_ms": 3578.957,
+      "count": 16
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.027,
+      "max_ms": 0.036,
+      "count": 7
+     },
+     "stage_d_push": {
+      "avg_ms": 0.172,
+      "max_ms": 0.202,
+      "count": 6,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.68,
+    "mem_mb": 1509.4,
+    "power_w": 8.6,
+    "temp_c": 50,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377894.889657
+   },
+   "npu": {
+    "power_w": 8.6,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3414,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.5,
+   "engine_cpu_pct": 126.1
+  },
+  {
+   "t": 17252.37,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.68,
+    "pushed_fps": 0.3,
+    "read_frames": 728,
+    "inference_frames": 16,
+    "engine_process_frames": 16,
+    "replayed_frames": 0,
+    "encoded_frames": 7,
+    "pushed_frames": 7,
+    "last_processed_frame_id": 642,
+    "dropped_frames_decode": 710,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 10,
+     "action_skip_cached_total": 18,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.384,
+      "max_ms": 1451.701,
+      "count": 728
+     },
+     "stage_b_inference": {
+      "avg_ms": 1473.639,
+      "max_ms": 3578.957,
+      "count": 16
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.027,
+      "max_ms": 0.036,
+      "count": 7
+     },
+     "stage_d_push": {
+      "avg_ms": 0.172,
+      "max_ms": 0.202,
+      "count": 6,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.68,
+    "mem_mb": 1509.4,
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377897.5787363
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3413,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.4,
+   "engine_cpu_pct": 117.7
+  },
+  {
+   "t": 17255.05,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.68,
+    "pushed_fps": 0.3,
+    "read_frames": 728,
+    "inference_frames": 16,
+    "engine_process_frames": 16,
+    "replayed_frames": 0,
+    "encoded_frames": 7,
+    "pushed_frames": 7,
+    "last_processed_frame_id": 642,
+    "dropped_frames_decode": 710,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 3,
+     "action_skip_gate_total": 10,
+     "action_skip_cached_total": 18,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.384,
+      "max_ms": 1451.701,
+      "count": 728
+     },
+     "stage_b_inference": {
+      "avg_ms": 1473.639,
+      "max_ms": 3578.957,
+      "count": 16
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.027,
+      "max_ms": 0.036,
+      "count": 7
+     },
+     "stage_d_push": {
+      "avg_ms": 0.172,
+      "max_ms": 0.202,
+      "count": 6,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.68,
+    "mem_mb": 1509.4,
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377900.235571
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3414,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.4,
+   "engine_cpu_pct": 137.3
+  },
+  {
+   "t": 17257.67,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.6,
+    "pushed_fps": 0.25,
+    "read_frames": 976,
+    "inference_frames": 19,
+    "engine_process_frames": 19,
+    "replayed_frames": 0,
+    "encoded_frames": 8,
+    "pushed_frames": 8,
+    "last_processed_frame_id": 909,
+    "dropped_frames_decode": 955,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 4,
+     "action_skip_gate_total": 12,
+     "action_skip_cached_total": 21,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.628,
+      "max_ms": 1451.701,
+      "count": 976
+     },
+     "stage_b_inference": {
+      "avg_ms": 1677.05,
+      "max_ms": 3764.509,
+      "count": 19
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.027,
+      "max_ms": 0.036,
+      "count": 8
+     },
+     "stage_d_push": {
+      "avg_ms": 0.172,
+      "max_ms": 0.202,
+      "count": 7,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.6,
+    "mem_mb": 1509.4,
+    "power_w": 8.5,
+    "temp_c": 50,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377903.160564
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 50,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3413,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.5,
+   "engine_cpu_pct": 119.0
+  },
+  {
+   "t": 17260.63,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.57,
+    "pushed_fps": 0.26,
+    "read_frames": 1064,
+    "inference_frames": 20,
+    "engine_process_frames": 20,
+    "replayed_frames": 0,
+    "encoded_frames": 9,
+    "pushed_frames": 9,
+    "last_processed_frame_id": 975,
+    "dropped_frames_decode": 1042,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 4,
+     "action_skip_gate_total": 14,
+     "action_skip_cached_total": 24,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.678,
+      "max_ms": 1451.701,
+      "count": 1064
+     },
+     "stage_b_inference": {
+      "avg_ms": 1739.832,
+      "max_ms": 3764.509,
+      "count": 20
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.027,
+      "max_ms": 0.036,
+      "count": 9
+     },
+     "stage_d_push": {
+      "avg_ms": 0.172,
+      "max_ms": 0.202,
+      "count": 8,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.57,
+    "mem_mb": 1509.4,
+    "power_w": 8.5,
+    "temp_c": 50,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377905.9118383
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 50,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3412,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.5,
+   "engine_cpu_pct": 122.3
+  },
+  {
+   "t": 17263.33,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.57,
+    "pushed_fps": 0.26,
+    "read_frames": 1064,
+    "inference_frames": 20,
+    "engine_process_frames": 20,
+    "replayed_frames": 0,
+    "encoded_frames": 9,
+    "pushed_frames": 9,
+    "last_processed_frame_id": 975,
+    "dropped_frames_decode": 1042,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 4,
+     "action_skip_gate_total": 14,
+     "action_skip_cached_total": 24,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.678,
+      "max_ms": 1451.701,
+      "count": 1064
+     },
+     "stage_b_inference": {
+      "avg_ms": 1739.832,
+      "max_ms": 3764.509,
+      "count": 20
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.027,
+      "max_ms": 0.036,
+      "count": 9
+     },
+     "stage_d_push": {
+      "avg_ms": 0.172,
+      "max_ms": 0.202,
+      "count": 8,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.57,
+    "mem_mb": 1509.6,
+    "power_w": 8.5,
+    "temp_c": 50,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377908.80425
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 50,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3413,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.5,
+   "engine_cpu_pct": 115.9
+  },
+  {
+   "t": 17266.24,
+   "stats": {
+    "source_fps": 30.0,
+    "engine_fps": 0.57,
+    "pushed_fps": 0.26,
+    "read_frames": 1064,
+    "inference_frames": 20,
+    "engine_process_frames": 20,
+    "replayed_frames": 0,
+    "encoded_frames": 9,
+    "pushed_frames": 9,
+    "last_processed_frame_id": 975,
+    "dropped_frames_decode": 1042,
+    "dropped_frames_result": 0,
+    "dropped_frames_packet": 0,
+    "reconnect_attempts": 0,
+    "reconnecting": false,
+    "max_fps": 30.0,
+    "startup_no_drop_seconds": 1.5,
+    "frame_stride": 1,
+    "push_stride": 3,
+    "replay_buffer_frames": 716,
+    "action_perf": {
+     "action_runs_total": 0,
+     "action_skip_warmup_total": 3,
+     "action_skip_track_age_total": 4,
+     "action_skip_gate_total": 14,
+     "action_skip_cached_total": 24,
+     "action_skip_default_total": 3
+    },
+    "stage_ms": {
+     "stage_a_decode": {
+      "avg_ms": 32.678,
+      "max_ms": 1451.701,
+      "count": 1064
+     },
+     "stage_b_inference": {
+      "avg_ms": 1739.832,
+      "max_ms": 3764.509,
+      "count": 20
+     },
+     "stage_c_encode": {
+      "avg_ms": 0.027,
+      "max_ms": 0.036,
+      "count": 9
+     },
+     "stage_d_push": {
+      "avg_ms": 0.172,
+      "max_ms": 0.202,
+      "count": 8,
+      "sleep_ms_total": 0.0
+     }
+    }
+   },
+   "metrics": {
+    "decision_mode": "edge",
+    "persons": 3,
+    "fps": 0.57,
+    "mem_mb": 1509.6,
+    "power_w": 8.5,
+    "temp_c": 49,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": true,
+    "timestamp": 1794377911.607717
+   },
+   "npu": {
+    "power_w": 8.5,
+    "temp_c": 50,
+    "ai_core_pct": 0,
+    "npu_mem_used_mb": 3412,
+    "npu_mem_total_mb": 3513
+   },
+   "sys_cpu_pct": 75.5,
+   "engine_cpu_pct": 128.5
+  }
+ ],
+ "ws_events": [
+  {
+   "t": 1.2444,
+   "frame_id": 1,
+   "dets": 3,
+   "detector_ms": 1115.793,
+   "pipeline_compute_ms": 3575.939,
+   "alert": false
+  },
+  {
+   "t": 3.63,
+   "frame_id": 165,
+   "dets": 3,
+   "detector_ms": 1102.99,
+   "pipeline_compute_ms": 1108.681,
+   "alert": false
+  },
+  {
+   "t": 4.7155,
+   "frame_id": 198,
+   "dets": 3,
+   "detector_ms": 1079.26,
+   "pipeline_compute_ms": 1084.004,
+   "alert": false
+  },
+  {
+   "t": 5.8814,
+   "frame_id": 231,
+   "dets": 3,
+   "detector_ms": 1148.037,
+   "pipeline_compute_ms": 1165.028,
+   "alert": false
+  },
+  {
+   "t": 12.2711,
+   "frame_id": 414,
+   "dets": 3,
+   "detector_ms": 1289.226,
+   "pipeline_compute_ms": 1431.315,
+   "alert": false
+  },
+  {
+   "t": 17.2063,
+   "frame_id": 573,
+   "dets": 3,
+   "detector_ms": 1090.041,
+   "pipeline_compute_ms": 1095.913,
+   "alert": false
+  },
+  {
+   "t": 21.2455,
+   "frame_id": 642,
+   "dets": 3,
+   "detector_ms": 2788.241,
+   "pipeline_compute_ms": 2811.457,
+   "alert": false
+  },
+  {
+   "t": 29.5333,
+   "frame_id": 909,
+   "dets": 3,
+   "detector_ms": 2191.865,
+   "pipeline_compute_ms": 2214.122,
+   "alert": false
+  },
+  {
+   "t": 32.4732,
+   "frame_id": 975,
+   "dets": 3,
+   "detector_ms": 2919.677,
+   "pipeline_compute_ms": 2931.322,
+   "alert": false
+  },
+  {
+   "t": 39.9843,
+   "frame_id": 1146,
+   "dets": 3,
+   "detector_ms": 2624.769,
+   "pipeline_compute_ms": 4746.107,
+   "alert": false
+  }
+ ]
+}

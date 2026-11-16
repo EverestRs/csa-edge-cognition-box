@@ -1,0 +1,30 @@
+{
+ "src": "../data/540p/whole_process_corner_1.mp4",
+ "size": [
+  960,
+  540
+ ],
+ "fed": 300,
+ "hw_decoded": 291,
+ "hw_wall_s": 0.627,
+ "hw_fps": 464.4,
+ "hw_ms_per_frame": 2.15,
+ "hw_cpu_s": 0.708,
+ "hw_cpu_cores": 1.13,
+ "feed_wall_s": 0.627,
+ "feed_fps": 478.8,
+ "drain_tail_s": 0.0,
+ "got_at_feed_end": 291,
+ "pending_at_feed_end": 9,
+ "hw_decode_fps": 464.4,
+ "decode_kept_up": true,
+ "first_decode_lat_ms": 10.8,
+ "sw_cv2_frames": 300,
+ "sw_wall_s": 1.098,
+ "sw_fps": 273.1,
+ "sw_cpu_s": 1.912,
+ "sw_cpu_cores": 1.74,
+ "first_frame_saved": true,
+ "frame_path": "/tmp/g4_vdec_probe/g4_vdec_frame0.jpg",
+ "verdict": "PASS"
+}

@@ -1,0 +1,15 @@
+{
+  "classes": [
+    "Normal",
+    "M01",
+    "M02",
+    "H03",
+    "Wave",
+    "Throw",
+    "Handshake"
+  ],
+  "val_acc": 0.9243243243243243,
+  "max_rel_err_vs_torch": 1e-06,
+  "opset": 17,
+  "size_mb": 6.1
+}

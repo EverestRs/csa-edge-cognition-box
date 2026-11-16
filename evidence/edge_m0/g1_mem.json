@@ -1,0 +1,8 @@
+{
+  "probe": "g1_mem",
+  "ts": 1793775168,
+  "mem_total_gb": 3.4,
+  "variant": "4GB",
+  "vlm_stretch_eligible": false,
+  "tier_advice": "文本LLM常驻需实测G1净余（可能降0.5B）；stretch VL 取消；zram 建议开启"
+}

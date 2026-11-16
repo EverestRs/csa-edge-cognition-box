@@ -1,0 +1,27 @@
+{
+  "probe": "service_metrics_nosudo",
+  "ts": 1793866575.698382,
+  "method": "conda python run.py (INFERENCE_PROFILE=edge), 无 systemd / 无 sudo",
+  "metrics": {
+    "decision_mode": "edge",
+    "persons": 0,
+    "power_w": 7.5,
+    "temp_c": 48,
+    "ai_core_util_pct": 0.0,
+    "npu_mock": false,
+    "npu_available": true,
+    "llm_online": false,
+    "timestamp": 1793866575.1271145
+  },
+  "npu_smi_info": [
+    "+--------------------------------------------------------------------------------------------------------+",
+    "| npu-smi 23.0.rc2                                 Version: 23.0.rc2                                     |",
+    "+-------------------------------+-----------------+------------------------------------------------------+",
+    "| NPU     Name                  | Health          | Power(W)     Temp(C)           Hugepages-Usage(page) |",
+    "| Chip    Device                | Bus-Id          | AICore(%)    Memory-Usage(MB)                        |",
+    "+===============================+=================+======================================================+",
+    "| 0       310B4                 | Alarm           | 7.6          48                15    / 15            |",
+    "| 0       0                     | NA              | 0            2829 / 3513                             |"
+  ],
+  "verdict": "PASS"
+}

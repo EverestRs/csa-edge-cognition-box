@@ -1,0 +1,41 @@
+{
+  "probe": "remote_mqtt_dashboard",
+  "ts": 1794230201.8296947,
+  "topology": {
+    "edge_box": [
+      "感知引擎+API :8000",
+      "llama-server :8001",
+      "mosquitto :1883 (MQTT) + :9001 (MQTT over WebSocket)",
+      "Streamlit :8501（演示便利，浏览器远程）"
+    ],
+    "remote": [
+      "笔记本/手机浏览器打开 http://<盒子IP>:8000/remote，直连 ws://<盒子IP>:9001/mqtt"
+    ]
+  },
+  "implementation": {
+    "broker_config": "listener 9001 0.0.0.0 / protocol websockets / allow_anonymous true",
+    "page": "demo/remote_dashboard.html（单文件、零依赖、内置最小 MQTT 3.1.1 over WS 客户端）",
+    "served_at": "/remote（FastAPI 读取静态页返回）",
+    "topics": [
+      "csa/edge1/status",
+      "csa/edge1/event",
+      "csa/edge1/rule/set",
+      "csa/edge1/rule/ack"
+    ]
+  },
+  "verification": {
+    "connack": "0x20 0x02 0x00 0x00",
+    "suback": "0x90 0x03 0x00 0x01 0x00",
+    "browser": {
+      "badge": "已连接",
+      "power_w": 7.4,
+      "temp_c": 48,
+      "persons": 2,
+      "llm": "在线",
+      "events": 31,
+      "rule_downlink": "已下发规则 + 规则回执"
+    },
+    "note": "浏览器实测由 browser-use 代理完成；测试产生的重复规则已删除"
+  },
+  "verdict": "PASS"
+}

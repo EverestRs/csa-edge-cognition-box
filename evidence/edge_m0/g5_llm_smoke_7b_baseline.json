@@ -1,0 +1,38 @@
+{
+  "probe": "g5_llm_smoke",
+  "ts": 1790844576.3976588,
+  "url": "http://localhost:8001/v1/chat/completions",
+  "model": "qwen2.5-vl-7b-instruct",
+  "cases": {
+    "parse": {
+      "n": 6,
+      "valid_rate": 1.0,
+      "p50_ms": 3661.7,
+      "fail_samples": []
+    },
+    "narrate_track": {
+      "n": 4,
+      "valid_rate": 1.0,
+      "p50_ms": 2402.1,
+      "fail_samples": []
+    },
+    "adjudicate": {
+      "n": 4,
+      "valid_rate": 1.0,
+      "p50_ms": 2717.8,
+      "fail_samples": []
+    },
+    "chat": {
+      "n": 4,
+      "valid_rate": 1.0,
+      "p50_ms": 2363.8,
+      "fail_samples": []
+    }
+  },
+  "verdict": "PASS",
+  "latency_gates": {
+    "parse_p50_s": 2.0,
+    "narrate_p50_s": 1.0,
+    "chat_p50_s": 10.0
+  }
+}

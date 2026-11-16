@@ -1,0 +1,16 @@
+{
+  "probe": "g6_gru_latency",
+  "ts": 1793850964.7242959,
+  "model": "models/action_v2/pose_classifier.onnx",
+  "input_shape": [
+    1,
+    32,
+    133,
+    3
+  ],
+  "threads": 2,
+  "gru_ms_p50": 110.73,
+  "gru_ms_p95": 174.93,
+  "rss_mb_after_warm": 182.2,
+  "pass_50ms": false
+}

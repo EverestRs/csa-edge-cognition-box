@@ -1,0 +1,59 @@
+{
+  "probe": "g3_atc_int8_qdq_blocked",
+  "ts": 1793870331.557309,
+  "status": "BLOCKED_BY_TOOLKIT",
+  "reason": "CANN 6.2.T2.0.B133 的 ONNX parser 未注册 QuantizeLinear/DequantizeLinear（opset 11/12/13 均报 E19010），QDQ int8 ONNX 无法进 atc",
+  "attempts": [
+    {
+      "opset": 13,
+      "per_channel": true,
+      "model": "models/detector/yolov8n_int8_qdq.onnx",
+      "atc": "FAIL No parser registered ai.onnx::13::QuantizeLinear"
+    },
+    {
+      "opset": 13,
+      "per_channel": true,
+      "model": "/tmp/tiny_qdq_13.onnx",
+      "atc": "FAIL 最小图同样报 No parser（排除模型结构因素）"
+    },
+    {
+      "opset": 12,
+      "per_channel": false,
+      "model": "models/detector/yolov8n_int8_qdq12.onnx",
+      "atc": "FAIL No parser registered ai.onnx::12::QuantizeLinear"
+    },
+    {
+      "opset": 12,
+      "per_channel": false,
+      "model": "/tmp/tiny_qdq_12.onnx",
+      "atc": "FAIL 同上"
+    },
+    {
+      "opset": 11,
+      "per_channel": false,
+      "model": "/tmp/tiny_qdq_11.onnx",
+      "atc": "FAIL No parser registered ai.onnx::11::QuantizeLinear"
+    }
+  ],
+  "onnx_accuracy_check": {
+    "note": "QDQ(13, per-channel) ONNX 在 ORT CPU 上与 FP32 对比",
+    "frames": 24,
+    "persons_fp32": 68,
+    "persons_int8": 67,
+    "matched_iou50": 67,
+    "recall_vs_fp32": 0.9853,
+    "precision_vs_fp32": 1.0,
+    "mean_iou_avg": 0.9625,
+    "max_score_delta": 0.1467,
+    "fp32_ms_avg": 1103.5,
+    "int8_ms_avg": 662.8,
+    "cpu_speedup": 1.66
+  },
+  "conclusion": "int8 OM 在本盒 CANN 版本不可达；FP32 OM（9.65fps）维持定案，D7 结案",
+  "logs": [
+    "results/edge_m0/atc_yolov8n_int8_qdq.log",
+    "/tmp/atc_tiny_11.log",
+    "/tmp/atc_tiny_12.log",
+    "/tmp/atc_tiny_13.log"
+  ]
+}

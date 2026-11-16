@@ -1,0 +1,69 @@
+{
+  "probe": "engine_rtsp_reconnect_fix",
+  "ts": 1794207633.988232,
+  "change": {
+    "file": "src/api/rest_api.py",
+    "where": "run_task.reader_loop",
+    "logic": "RTSP 读失败时无限重试（指数退避由 VideoStream._reconnect 提供 2s→30s），stop_event/stop_requested 时退出；本地文件仍按 EOF 结束；新增任务级 reconnect_attempts（累计）与 reconnecting（当前状态）字段"
+  },
+  "long_outage_recover": {
+    "task_id": "task_a3a65042",
+    "timeline": [
+      {
+        "phase": "baseline_17s",
+        "status": "running",
+        "read_frames": 182,
+        "inference_frames": 115
+      },
+      {
+        "phase": "outage_10s",
+        "status": "running",
+        "read_frames": 306,
+        "reconnect_attempts": 2,
+        "reconnecting": true
+      },
+      {
+        "phase": "recovered_25s",
+        "status": "running",
+        "read_frames": 442,
+        "inference_frames": 346,
+        "reconnect_attempts": 7,
+        "reconnecting": false
+      },
+      {
+        "phase": "stop",
+        "status": "stopped"
+      }
+    ],
+    "result": "PASS：断流 >2s 不再提前结束；源恢复后自动续流，累计重试 7 次"
+  },
+  "stop_during_outage": {
+    "task_id": "task_3cd9ff1e",
+    "timeline": [
+      {
+        "phase": "outage_5s",
+        "status": "running",
+        "read_frames": 498
+      },
+      {
+        "phase": "stop_requested",
+        "status": "stopped"
+      },
+      {
+        "phase": "relay_back_14s",
+        "status": "stopped",
+        "read_frames": 498
+      }
+    ],
+    "result": "PASS：断流期间 stop 生效，源恢复后 read_frames 不再增长（reader 线程已退出）"
+  },
+  "local_file_regression": {
+    "task_id": "task_ab834c1a",
+    "source": "/tmp/short_30f.mp4 (30 帧)",
+    "status": "finished",
+    "read_frames": 27,
+    "inference_frames": 9,
+    "result": "PASS：本地文件按 EOF 正常结束，不进入重试"
+  },
+  "verdict": "FIXED"
+}

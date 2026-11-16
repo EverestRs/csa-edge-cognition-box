@@ -1,0 +1,233 @@
+{
+  "probe": "detector_int8_qdq_accuracy",
+  "frames": 24,
+  "fp32_path": "models/detector/yolov8n.onnx",
+  "int8_path": "models/detector/yolov8n_int8_qdq.onnx",
+  "conf": 0.32,
+  "nms_iou": 0.5,
+  "persons_fp32": 68,
+  "persons_int8": 67,
+  "matched_iou50": 67,
+  "recall_vs_fp32": 0.9853,
+  "precision_vs_fp32": 1.0,
+  "fp32_ms_avg": 1103.5,
+  "int8_ms_avg": 662.8,
+  "frames_detail": [
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 200,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9754,
+      "max_score_delta": 0.0128
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 400,
+      "persons_fp32": 2,
+      "persons_int8": 2,
+      "matched_iou50": 2,
+      "mean_iou": 0.9735,
+      "max_score_delta": 0.0168
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 600,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9795,
+      "max_score_delta": 0.0094
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 800,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9723,
+      "max_score_delta": 0.0201
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 1000,
+      "persons_fp32": 4,
+      "persons_int8": 4,
+      "matched_iou50": 4,
+      "mean_iou": 0.9217,
+      "max_score_delta": 0.0898
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 1200,
+      "persons_fp32": 3,
+      "persons_int8": 2,
+      "matched_iou50": 2,
+      "mean_iou": 0.9602,
+      "max_score_delta": 0.0112
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 1400,
+      "persons_fp32": 2,
+      "persons_int8": 2,
+      "matched_iou50": 2,
+      "mean_iou": 0.9656,
+      "max_score_delta": 0.1467
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 1600,
+      "persons_fp32": 2,
+      "persons_int8": 2,
+      "matched_iou50": 2,
+      "mean_iou": 0.9657,
+      "max_score_delta": 0.0075
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 1800,
+      "persons_fp32": 2,
+      "persons_int8": 2,
+      "matched_iou50": 2,
+      "mean_iou": 0.9687,
+      "max_score_delta": 0.0227
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 2000,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9566,
+      "max_score_delta": 0.0389
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 2200,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9667,
+      "max_score_delta": 0.0106
+    },
+    {
+      "video": "laying_corner_1-1.mp4",
+      "frame": 2400,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9496,
+      "max_score_delta": 0.0187
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 200,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9624,
+      "max_score_delta": 0.038
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 400,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9596,
+      "max_score_delta": 0.0377
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 600,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.977,
+      "max_score_delta": 0.0506
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 800,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9609,
+      "max_score_delta": 0.039
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 1000,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9641,
+      "max_score_delta": 0.0884
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 1200,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9731,
+      "max_score_delta": 0.0901
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 1400,
+      "persons_fp32": 2,
+      "persons_int8": 2,
+      "matched_iou50": 2,
+      "mean_iou": 0.954,
+      "max_score_delta": 0.0294
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 1600,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9681,
+      "max_score_delta": 0.0341
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 1800,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9644,
+      "max_score_delta": 0.0559
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 2000,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9657,
+      "max_score_delta": 0.005
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 2200,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9376,
+      "max_score_delta": 0.0202
+    },
+    {
+      "video": "smoking_corner_1-1.mp4",
+      "frame": 2400,
+      "persons_fp32": 3,
+      "persons_int8": 3,
+      "matched_iou50": 3,
+      "mean_iou": 0.9582,
+      "max_score_delta": 0.0277
+    }
+  ]
+}

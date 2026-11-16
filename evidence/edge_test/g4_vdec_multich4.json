@@ -1,0 +1,38 @@
+{
+ "channels": 4,
+ "per_channel": {
+  "0": {
+   "fed": 200,
+   "decoded": 186,
+   "feed_wall": 6.909
+  },
+  "1": {
+   "fed": 200,
+   "decoded": 184,
+   "feed_wall": 6.829
+  },
+  "2": {
+   "fed": 200,
+   "decoded": 140,
+   "feed_wall": 4.108
+  },
+  "3": {
+   "fed": 200,
+   "decoded": 169,
+   "feed_wall": 2.922
+  }
+ },
+ "channels_succeeded": 4,
+ "total_decoded_frames": 679,
+ "concurrent_wall_s": 7.271,
+ "aggregate_fps": 93.4,
+ "total_cpu_s": 3.057,
+ "total_cpu_cores": 0.42,
+ "cpu_s_per_frame": 4.5,
+ "src": "../data/540p/whole_process_corner_1.mp4",
+ "size": [
+  960,
+  540
+ ],
+ "frames_per_channel": 200
+}

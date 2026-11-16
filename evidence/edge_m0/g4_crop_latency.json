@@ -1,0 +1,12 @@
+{
+  "probe": "g4_crop_latency",
+  "ts": 1793850948.1010382,
+  "model": "models/crop/crop_v1.onnx",
+  "toy_weights": false,
+  "input_size": 224,
+  "threads": 2,
+  "crop_ms_p50": 25.25,
+  "crop_ms_p95": 41.85,
+  "pass_20ms": false,
+  "note": "toy 权重仅测速；per-class P/R 待 T2.5 真模型复跑"
+}

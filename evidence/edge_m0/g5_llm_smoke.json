@@ -1,0 +1,71 @@
+{
+  "probe": "g5_llm_smoke",
+  "ts": 1793853749.7071805,
+  "url": "http://localhost:8001/v1/chat/completions",
+  "model": "/home/HwHiAiUser/models/llm/qwen2.5-0.5b-instruct-q4_0.gguf",
+  "cases": {
+    "parse": {
+      "n": 6,
+      "valid_rate": 0.5,
+      "p50_ms": 8956.6,
+      "fail_samples": [
+        {
+          "ms": null,
+          "ok": false,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=15.0)"
+        },
+        {
+          "ms": null,
+          "ok": false,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=15.0)"
+        }
+      ]
+    },
+    "narrate_track": {
+      "n": 4,
+      "valid_rate": 0.25,
+      "p50_ms": 7926.3,
+      "fail_samples": [
+        {
+          "ms": null,
+          "ok": false,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=15.0)"
+        },
+        {
+          "ms": null,
+          "ok": false,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=15.0)"
+        }
+      ]
+    },
+    "adjudicate": {
+      "n": 4,
+      "valid_rate": 1.0,
+      "p50_ms": 7276.1,
+      "fail_samples": []
+    },
+    "chat": {
+      "n": 4,
+      "valid_rate": 0.5,
+      "p50_ms": 5154.5,
+      "fail_samples": [
+        {
+          "ms": null,
+          "ok": false,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=15.0)"
+        },
+        {
+          "ms": null,
+          "ok": false,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=15.0)"
+        }
+      ]
+    }
+  },
+  "verdict": "UNREACHABLE",
+  "latency_gates": {
+    "parse_p50_s": 2.0,
+    "narrate_p50_s": 1.0,
+    "chat_p50_s": 10.0
+  }
+}

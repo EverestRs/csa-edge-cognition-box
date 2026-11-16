@@ -1,0 +1,1 @@
+{"probe":"g3_atc_om","ts":1790844459,"status":"SKIP","reason":"atc_not_installed(非盒环境或CANN未配环境变量)","src":"models/detector/yolov8n.onnx","soc":"Ascend310B4"}
