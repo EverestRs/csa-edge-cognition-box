@@ -1,0 +1,391 @@
+detector:
+  name: yolov8n
+  confidence_threshold: 0.35
+  model_path: models/detector/yolov8n.pt
+  onnx_path: models/detector/yolov8n.onnx
+  labels_path: configs/labels/detector_labels.txt
+  input_size: [640, 640]
+  input_tensor_name: images
+  output_tensor_names: [output0]
+  class_mapping:
+    person: person
+tracker:
+  name: bytetrack
+  reid_model_path: models/tracker/reid.onnx
+  track_buffer: 30
+  match_threshold: 0.6          # ROADMAP Stage 0a：预测框 IoU 阈值（旧纯 IoU 口径 0.8 快速运动下断 ID）
+  use_motion_predict: true      # 恒速运动预测（质心速度 EMA 外推）
+  enable_fallback_match: true   # 两阶段匹配：IoU 失败后质心距离贪心兜底
+  fallback_speed_gate: 0.8      # 兜底速度门控：位移/对角线 ≤ gate×(missed+1)
+  velocity_ema: 0.5             # 速度平滑系数
+  fallback_min_area_ratio: 0.4  # 兜底尺寸合理性（track面积/检测面积）
+  fallback_max_area_ratio: 2.5
+pose:
+  name: vitpose
+  model_path: models/pose/vitpose_wholebody_b.pth
+  onnx_path: models/pose/vitpose_wholebody_b.onnx
+  labels_path: configs/labels/pose_keypoints.txt
+  input_size: [256, 192]
+  input_tensor_name: input
+  output_tensor_names: [keypoints]
+  keypoint_keep_indices: []
+action:
+  name: slowfast
+  model_path: models/action/slowfast.pth
+  onnx_path: models/action/slowfast.onnx
+  labels_path: configs/labels/action_labels.txt
+  direct_classes:               # ROADMAP Stage 3：原型扩展类（须与部署 ONNX 输出维度一致）
+    - N01                       # 挥手（proto_001）
+  source_labels_path: ""
+  enable_keyword_mapping: true
+  keyword_mapping_threshold: 0.18
+  input_clip_len: 32
+  input_size: [224, 224]
+  slowfast_alpha: 4
+  normalize_mean: [0.45, 0.45, 0.45]
+  normalize_std: [0.225, 0.225, 0.225]
+  input_tensor_name: video
+  output_tensor_names: [logits]
+  class_mapping:
+    Normal: Normal
+    Fight: H01
+    Bullying: H02
+    Fall: H03
+    ExtremeDanger: H04
+    Vandalism: H05
+    Smoking: M01
+    Loitering: S01
+  # PoseClassifier 主路径配置 (VLM-as-Teacher)
+  pose_classifier_onnx_path: models/action_v2/pose_classifier.onnx
+  pose_classifier_conf_high: 0.75
+  pose_classifier_conf_low: 0.40
+
+temporal_adjudicator:
+  enabled: false
+  apply_decision: false
+  enable_heuristic: true
+  model_path: models/action/temporal_adjudicator.json
+  window_size: 16
+  min_frames: 8
+  edge_margin_ratio: 0.18
+  risk_then_fall_score: 0.58
+  direct_fall_score: 0.62
+
+runtime:
+  device: cuda
+  backend: onnxruntime
+  execution_provider: CUDAExecutionProvider
+  intra_op_num_threads: 4
+  inter_op_num_threads: 2
+  graph_optimization_level: ORT_ENABLE_ALL
+  enable_mem_pattern: true
+  enable_cpu_mem_arena: false
+  opencv_num_threads: 1
+
+inference:
+  # B6: 三阶段管道（detector/tracker → pose → action/post）帧间重叠执行；false 时为串行
+  pipeline:
+    enabled: true
+    queue_size: 4
+  frame_stride: 2
+  pose_stride: 8
+  max_pose_tracks: 2
+  action_stride: 6
+  max_action_tracks: 2
+  action_min_track_score: 0.30
+  action_warmup_frames: 8
+  action_min_track_age: 4
+  action_default_label: Normal
+  action_default_confidence: 0.60
+  max_fps: 12
+  startup_no_drop_seconds: 1.5
+  clip_window_size: 32
+  prefetch_queue_size: 8
+  push_stride: 1
+  jpeg_quality: 60
+  ws_sleep_ms: 12
+  source_resize: false
+  send_pose_keypoints: true
+  show_pose_overlay: true
+  replay_buffer_frames: 24
+  replay_from_task_start: true
+  send_frame_image_b64: false
+
+label_space:
+  canonical_labels: [Normal, H01, H02, H03, H04, H05, M01, M02, M03, S01, S02]
+  risk_level_mapping:
+    Normal: LOW
+    H01: HIGH
+    H02: HIGH
+    H03: HIGH
+    H04: HIGH
+    H05: HIGH
+    M01: MEDIUM
+    M02: MEDIUM
+    M03: MEDIUM
+    S01: MEDIUM
+    S02: MEDIUM
+  role_labels: [attacker, victim, bystander, unknown]
+
+behavior_heuristics:
+  loiter_min_frames: 90
+  loiter_radius_px: 80
+  loiter_path_ratio: 2.0
+  phone_min_frames: 24
+  phone_hand_head_ratio: 0.16
+  phone_head_tilt_ratio: 0.12
+  tamper_min_frames: 18
+  tamper_bbox_area_ratio: 0.22
+  tamper_center_radius_ratio: 0.30
+  fall_min_frames: 6
+  fall_aspect_ratio: 0.62
+  fall_drop_ratio: 0.08
+  fall_motion_ratio: 0.04
+  fall_pose_horizontal_ratio: 1.05
+  fall_floor_margin_ratio: 0.12
+  fall_center_low_ratio: 0.60
+  fall_still_motion_ratio: 0.08
+  fall_head_low_ratio: 0.58
+  fall_event_ttl_calls: 24
+  fall_event_radius_ratio: 1.0
+  h03_hold_frames: 4
+  h02_min_frames: 4
+  h01_min_frames: 4
+  h02_motion_ratio: 0.10
+  h01_motion_ratio: 0.14
+  interaction_close_ratio: 2.20
+  interaction_contact_iou: 0.018
+  h02_pair_min_frames: 3
+  h01_pair_min_frames: 3
+  h01_dual_active_ratio: 0.11
+  h04_edge_impact_motion_ratio: 0.14
+  h04_edge_fast_motion_ratio: 0.26
+  h04_impact_min_frames: 2
+  h04_pre_fall_hold_frames: 10
+  h01_transition_min_base_conf: 0.56
+  h04_transition_min_base_conf: 0.55
+  h01_pair_transition_min_frames: 1
+  h04_transition_min_frames: 1
+  h04_transition_hold_frames: 3
+  h04_transition_cooldown_frames: 18
+  h04_transition_min_impact_counter: 1
+  h04_transition_same_risk_margin: 0.10
+  h03_risk_pre_frames: 2
+  h03_mode_hold_frames: 10
+  fall_narrow_aspect_ratio: 0.72
+  smoke_min_frames: 6
+  smoke_hand_mouth_ratio: 0.16
+  smoke_unilateral_ratio: 1.8
+  smoke_head_y_tolerance_ratio: 0.18
+  smoke_hand_shoulder_offset_ratio: 0.22
+  vandal_min_frames: 8
+  vandal_motion_ratio: 0.14
+  danger_edge_margin_ratio: 0.14
+  forbidden_zones:
+    - id: zone_forbidden_1
+      polygon: []
+  danger_zones:
+    - id: zone_danger_edge_1
+      polygon: []
+
+profiles:
+  realtime:
+    input_size: [640, 360]
+    frame_stride: 4
+    pose_stride: 8
+    pose_motion_gate_iou_threshold: 0.95
+    max_pose_tracks: 4
+    action_stride: 4
+    max_action_tracks: 3
+    action_min_track_score: 0.28
+    action_warmup_frames: 8
+    action_min_track_age: 4
+    max_fps: 8
+    push_stride: 3
+    jpeg_quality: 48
+    ws_sleep_ms: 24
+    source_resize: true
+    send_pose_keypoints: false
+    show_pose_overlay: false
+    replay_buffer_frames: 24
+    replay_from_task_start: true
+    pose_keypoint_keep_indices: []
+    detector_conf_threshold: 0.32
+    detector_onnx_path: models/detector/yolov8n_int8.onnx
+    pose_onnx_path: models/pose/vitpose_wholebody_s_int8.onnx
+    action_onnx_path: models/action/slowfast_int8.onnx
+  high_accuracy:
+    input_size: [1280, 720]
+    frame_stride: 1
+    pose_stride: 2
+    max_pose_tracks: 4
+    action_stride: 3
+    max_action_tracks: 2
+    action_min_track_score: 0.25
+    action_warmup_frames: 8
+    action_min_track_age: 4
+    max_fps: 25
+    push_stride: 1
+    jpeg_quality: 75
+    ws_sleep_ms: 4
+    source_resize: false
+    send_pose_keypoints: true
+    show_pose_overlay: true
+    replay_buffer_frames: 16
+    replay_from_task_start: false
+    pose_keypoint_keep_indices: []
+    detector_conf_threshold: 0.30
+    detector_onnx_path: models/detector/yolov8n.onnx
+    pose_onnx_path: models/pose/vitpose_wholebody_b.onnx
+    action_onnx_path: models/action/slowfast.onnx
+  balanced_dynamic:
+    input_size: [640, 360]
+    frame_stride: 4
+    pose_stride: 16
+    max_pose_tracks: 1
+    action_stride: 12
+    max_action_tracks: 1
+    action_min_track_score: 0.40
+    action_warmup_frames: 8
+    action_min_track_age: 4
+    max_fps: 8
+    push_stride: 3
+    jpeg_quality: 48
+    ws_sleep_ms: 24
+    source_resize: true
+    send_pose_keypoints: false
+    show_pose_overlay: false
+    replay_buffer_frames: 24
+    replay_from_task_start: true
+    enable_detector_gating: true
+    enable_pose_motion_gate: true
+    detector_stride: 5
+    detector_max_skip_frames: 10
+    detector_motion_threshold: 0.020
+    detector_low_motion_threshold: 0.010
+    detector_warmup_frames: 1
+    pose_force_refresh_gap: 18
+    pose_motion_gate_iou_threshold: 0.90
+  offline_temporal_eval:
+    input_size: [640, 360]
+    frame_stride: 4
+    pose_stride: 8
+    pose_motion_gate_iou_threshold: 0.95
+    max_pose_tracks: 4
+    action_stride: 4
+    max_action_tracks: 3
+    action_min_track_score: 0.28
+    action_warmup_frames: 8
+    action_min_track_age: 4
+    max_fps: 8
+    push_stride: 3
+    jpeg_quality: 48
+    ws_sleep_ms: 24
+    source_resize: true
+    send_pose_keypoints: false
+    show_pose_overlay: false
+    replay_buffer_frames: 24
+    replay_from_task_start: true
+    pose_keypoint_keep_indices: []
+    detector_conf_threshold: 0.32
+    detector_onnx_path: models/detector/yolov8n_int8.onnx
+    pose_onnx_path: models/pose/vitpose_wholebody_s_int8.onnx
+    action_onnx_path: models/action/slowfast_int8.onnx
+    temporal_adjudicator:
+      enabled: true
+      apply_decision: true
+      enable_heuristic: true
+      model_path: models/action/temporal_adjudicator_reviewed_v1.json
+      window_size: 16
+      min_frames: 8
+
+  # ── edge 档位（EDGE v3.0 单盒 Atlas / edge_migration 01 §2.8）──────────
+  # 模型路径指向 .om 时走昇腾 OM 后端；OM 缺失/转换未完成自动回退同源 .onnx
+  edge:
+    decision_mode: edge
+    source_backend: auto
+    source_resolution: [1280, 720]
+    input_size: [960, 540]
+    frame_stride: 2
+    max_fps: 8
+    pose_stride: 12
+    max_pose_tracks: 3
+    action_stride: 12          # 盒上实测修正：GRU p95 175ms → 降频保帧率（2026-11-05 FIELD_READOUT G6）
+    max_action_tracks: 2
+    action_min_track_score: 0.28
+    action_warmup_frames: 8
+    action_min_track_age: 4
+    push_stride: 1
+    jpeg_quality: 48
+    ws_sleep_ms: 24
+    source_resize: true
+    send_pose_keypoints: false
+    show_pose_overlay: false
+    replay_buffer_frames: 24
+    replay_from_task_start: true
+    pose_keypoint_keep_indices: []
+    detector_conf_threshold: 0.32
+    slowfast_enabled: false
+    detector_stride: 2          # 演示调参：4 → 2，框更新更连贯
+    detector_max_skip_frames: 4
+    detector_onnx_path: models/detector/yolov8n.om   # 盒上验证档(2026-11-05): FP32 OM parity 已过；int8 为 QLinear 格式 atc 转不动，待 Q/DQ 重导后回切
+    pose_onnx_path: models/pose/vitpose_wholebody_s_int8.onnx  # C: pose OM 待 Q/DQ 版，当前 CPU int8 直路
+    action_onnx_path: models/action/slowfast_int8.onnx
+
+  # ── throughput 档（参赛性能基准：全帧率检测吞吐，非演示用）──────────
+  # 与 edge 同模型同阈值（精度口径不变），仅放开限频/关闭姿态动作旁路以冲高推理 fps。
+  # 缓冲复用后 NPU 检测 16.6ms/帧（60fps 上限）；端到端受源帧率(30fps)与软解限制。
+  # 实测：异步三阶段管道在满帧投递下队列积压失速（q1 满、真实完成率<1fps、回放假框），
+  # 故本档关管道走串行检测（infer 线程同步 process），max_fps=30 匹配源帧率可持续。
+  throughput:
+    decision_mode: edge
+    source_backend: auto
+    source_resolution: [1280, 720]
+    input_size: [960, 540]
+    pipeline:
+      enabled: false           # 串行检测：避免异步管道满帧积压根塞（edge 仍用管道）
+      queue_size: 4
+    frame_stride: 1            # 每帧送推理（edge=2）
+    max_fps: 30                # 匹配源帧率可持续上限（edge=8；0=不限频会洪泛）
+    pose_stride: 100000        # 实际关闭姿态（CPU int8 ONNX 大头）
+    max_pose_tracks: 1
+    action_stride: 100000      # 实际关闭动作
+    max_action_tracks: 1
+    action_min_track_score: 0.28
+    action_warmup_frames: 8
+    action_min_track_age: 4
+    push_stride: 3             # 降 WS 推送开销（基准看推理 fps）
+    jpeg_quality: 48
+    ws_sleep_ms: 0
+    source_resize: true
+    send_pose_keypoints: false
+    show_pose_overlay: false
+    replay_buffer_frames: 24
+    replay_from_task_start: true
+    pose_keypoint_keep_indices: []
+    detector_conf_threshold: 0.32
+    slowfast_enabled: false
+    detector_stride: 1         # 每帧检测（edge=2）
+    detector_max_skip_frames: 1
+    enable_detector_gating: false   # 关闭运动门控跳帧，全帧检测
+    detector_onnx_path: models/detector/yolov8n.om
+    pose_onnx_path: models/pose/vitpose_wholebody_s_int8.onnx
+    action_onnx_path: models/action/slowfast_int8.onnx
+
+# ── MQTT 端云联动（T3.4，edge_migration/mqtt_bridge）────────────────
+# 盒上启用（Mosquitto 本机）：遥测上行 csa/{box}/status|event，布控下行 rule/set
+mqtt:
+  enabled: true         # 盒上启用（本机 mosquitto，免 sudo 解包运行）
+  host: 127.0.0.1
+  port: 1883
+  box_id: edge1
+  topic_prefix: csa
+  buffer_size: 100
+  allow_mock: false     # 盒上有真实 npu-smi 遥测；拍摄/验收用真值
+
+# ── 演示剧本开关（T6.5，连排/拍摄日防翻车）────────────────────────
+# enabled=true 时：narrate 的 LLM 失败/降级回退预生成旁白；chat 先查预缓存问答。
+# 预热：POST /api/v1/demo/prime（走真实链路生成写回 configs/demo_pack.json）
+demo:
+  enabled: false
+  pack_path: configs/demo_pack.json

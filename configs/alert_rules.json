@@ -1,0 +1,113 @@
+{
+  "rules": [
+    {
+      "rule_id": "rule_0002",
+      "text": "识别有人做出不文明手势",
+      "enabled": false,
+      "created_at": "2026-08-30 13:56:11",
+      "parsed": {
+        "matched_classes": [],
+        "open_description": "有人做出竖中指等侮辱性不文明手势",
+        "use_open_vocabulary": true,
+        "confidence_threshold": 0.6,
+        "reasoning": "超出内置类别，需开放词汇判定",
+        "parser": "vlm"
+      },
+      "stats": {
+        "evaluated": 0,
+        "triggered": 0,
+        "last_triggered_frame": null,
+        "last_triggered_at": null
+      }
+    },
+    {
+      "rule_id": "rule_0003",
+      "text": "告警有人倒地躺下",
+      "enabled": true,
+      "created_at": "2026-08-31 13:14:00",
+      "parsed": {
+        "matched_classes": [
+          "H03"
+        ],
+        "open_description": "有人倒地躺下",
+        "use_open_vocabulary": false,
+        "confidence_threshold": 0.6,
+        "reasoning": "对应内置H03",
+        "parser": "vlm"
+      },
+      "stats": {
+        "evaluated": 0,
+        "triggered": 120,
+        "last_triggered_frame": 1032,
+        "last_triggered_at": "2026-11-16 09:56:40",
+        "last_triggered_ts": 1794794200.1745179
+      }
+    },
+    {
+      "rule_id": "rule_0006",
+      "text": "告警有人吸烟",
+      "enabled": true,
+      "created_at": "2026-09-03 09:40:33",
+      "parsed": {
+        "matched_classes": [
+          "M01"
+        ],
+        "open_description": "有人吸烟",
+        "use_open_vocabulary": false,
+        "confidence_threshold": 0.6,
+        "reasoning": "对应内置M01",
+        "parser": "vlm"
+      },
+      "stats": {
+        "evaluated": 0,
+        "triggered": 1812,
+        "last_triggered_frame": 3756,
+        "last_triggered_at": "2026-11-16 10:14:46",
+        "last_triggered_ts": 1794795286.5680046
+      }
+    },
+    {
+      "rule_id": "rule_0007",
+      "text": "告警挥手：手臂向上伸展，手掌向前，动作幅度较大，伴随身体轻微摆动",
+      "enabled": true,
+      "created_at": "2026-09-26 15:30:36",
+      "parsed": {
+        "matched_classes": [],
+        "open_description": "挥手：手臂向上伸展，手掌向前，动作幅度大，伴随身体轻微摆动",
+        "use_open_vocabulary": true,
+        "confidence_threshold": 0.6,
+        "reasoning": "挥手动作与内置类别无关",
+        "parser": "vlm"
+      },
+      "stats": {
+        "evaluated": 0,
+        "triggered": 0,
+        "last_triggered_frame": null,
+        "last_triggered_at": null
+      }
+    },
+    {
+      "rule_id": "rule_0008",
+      "text": "找出在门口徘徊的人",
+      "enabled": true,
+      "created_at": "2026-11-13 14:50:51",
+      "parsed": {
+        "matched_classes": [
+          "S01"
+        ],
+        "open_description": "找出在门口徘徊的人",
+        "use_open_vocabulary": false,
+        "confidence_threshold": 0.6,
+        "reasoning": "关键词降级解析",
+        "parser": "keyword_fallback"
+      },
+      "stats": {
+        "evaluated": 0,
+        "triggered": 17,
+        "last_triggered_frame": 1884,
+        "last_triggered_at": "2026-11-16 10:07:57",
+        "last_triggered_ts": 1794794877.9899886
+      }
+    }
+  ]
+}

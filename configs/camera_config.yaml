@@ -1,0 +1,14 @@
+default_camera:
+  camera_id: cam_default_01
+  stream_url: data/demo_video.mp4
+  resolution: 1920x1080
+  fps: 25
+  zone_id: A
+
+zones:
+  forbidden_zones:
+    - id: zone_forbidden_1
+      polygon: []
+  danger_zones:
+    - id: zone_danger_edge_1
+      polygon: []

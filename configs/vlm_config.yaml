@@ -1,0 +1,127 @@
+enabled: true
+review_mode: async
+trigger_classes: [H01, H02, H03, H04, H05, M01, M02, M03, S01, S02]
+# 运行时灰色地带复核区间 (PoseClassifier 置信度)
+confidence_gray_zone: [0.55, 0.85]
+runtime_gray_low: 0.40
+runtime_gray_high: 0.75
+# 模型配置
+model_name: qwen2.5-vl-7b-instruct
+model_path: /home/user/VSCodeProjects/VdAnalyst/Qwen2.5-VL-7B-Instruct
+prompt_template: "分析图中人员的行为。请先用一句话描述其动作过程（描述画面中可见的具体证据），再判断行为类别。选项：Normal(正常), H01(打架斗殴), H02(校园霸凌), H03(跌倒/昏厥), H04(疑似轻生), H05(破坏设施), M01(吸烟), M02(使用手机), M03(遮挡摄像头), S01(异常徘徊), S02(翻越围栏)。M01 判定要领：监控画面中香烟往往很小甚至不可见；吸烟的典型证据是手指间夹持细长物（烟）举向嘴部并伴随吸气动作。办公/会议场景中手部靠近面部的动作绝大多数是托腮、扶眼镜、整理头发、喝水、进食、写字翻页——这些一律判 Normal，不得仅凭手靠近嘴部判 M01。只有当你能在画面中辨认出细长烟具或烟雾时才判 M01；辨认不出时判 Normal。仅输出JSON格式，不要包含其他文字，例如：{\"description\": \"该人员手指夹持细长物举向嘴部，手部动作反复，疑似吸烟\", \"label\": \"M01\", \"confidence\": 0.85}"
+# 推理框架: true=vLLM(离线批标注), false=transformers(运行时复核)
+# B3: 全局 VLM 并发槽位（vLLM continuous batching 上限保护，防 KV cache 挤爆）
+vlm_router:
+  max_concurrent_requests: 4
+
+use_vllm: true
+vllm_url: http://localhost:8001/v1/chat/completions
+# 延迟预算（离线标注用较大值）
+max_latency_ms_gpu: 60000
+max_latency_ms_cpu: 120000
+# 复核生成 token 上限：链式输出（description+label+confidence）在灰区上下文注入后变长，
+# 旧值 128 会截断 JSON 落入关键词兜底（WEAKNESS_AUDIT #2）
+review_max_tokens: 256
+
+# ── 场景叙述器 (SceneNarrator)：周期性对整个场景生成中文叙述 ──
+scene_narrator:
+  enabled: true
+  narration_mode: facts   # T3.2: 结构化事实为唯一信息源（不发图；输出 schema 与 images 一致）
+  narrate_interval_seconds: 20   # 每隔多少秒视频时间叙述一次
+  frames_per_narration: 4        # 每次送入 VLM 的关键帧数
+  summary_window: 10             # 滚动摘要覆盖的最近叙述条数
+  summary_refresh_every: 5       # 每新增多少条叙述重建一次滚动摘要
+  max_image_px: 768
+  max_latency_ms: 15000
+  failure_backoff_seconds: 30    # vLLM 调用失败后的退避时长
+
+# ── 告警事件裁决器 (AlertAdjudicator)：告警触发后异步两趟复核 ──
+alert_adjudicator:
+  enabled: true
+  before_seconds: 5              # 裁决窗口：告警前 N 秒
+  after_seconds: 5               # 裁决窗口：告警后 N 秒（收满才发起）
+  frames_per_call: 6
+  max_image_px: 512
+  max_latency_ms: 30000
+  failure_backoff_seconds: 30
+  max_pending_alerts: 4          # 待裁决队列上限（告警爆发期有界排队，超出丢弃并计数）
+
+# ── 环形帧缓冲（叙述器与裁决器共用，降采样存储；窗口淘汰按视频时间执行） ──
+frame_buffer:
+  max_seconds: 30
+  samples_per_second: 2
+  target_width: 960
+
+# ── 原帧复核缓冲（person-crop 专用，直存原始分辨率）──
+# 只用于取近帧裁剪，独立收口防止内存膨胀：48 帧 ≈ 300MB@1080p
+# （旧实现继承 30s×10fps=300 帧 ≈ 1.9GB，WEAKNESS_AUDIT #9）
+frame_buffer_orig:
+  max_seconds: 12
+  max_frames: 48
+
+# ── 场景知识库 (SceneIndex)：BM25 检索 + 可选向量重排 ──
+scene_index:
+  enabled: true
+  use_vector: true
+  vector_model_path: models/embedding/bge-small-zh-v1.5   # 本地嵌入模型，缺失时自动降级为纯 BM25
+
+# ── 强制 VLM 复核：高风险类别越过置信度三级决策，直接逐目标复核 ──
+force_vlm_review:
+  classes: [H03, M01, M02]  # 跌倒易与坐姿混淆；吸烟/手机需看清手部动作，均强制大模型复核
+  throttle_frames: 25   # 同一目标两次复核的最小间隔（处理帧数），控制 VLM 负载
+
+# ── 自然语言告警规则引擎：一句话定义告警（闭集映射 + 开放词汇判定）──
+nl_rule_engine:
+  enabled: true
+  open_check_interval_seconds: 15   # 开放词汇规则的定时判定周期（视频时间）
+  expedited_check_gap_seconds: 6    # 场景叙述报告异常活动后的加急判定最小间隔
+  frames_per_check: 4
+  rule_cooldown_seconds: 10         # 同一规则两次告警的最小视频时间间隔
+  default_min_confidence: 0.6
+  max_image_px: 512
+  max_latency_ms: 20000
+  failure_backoff_seconds: 30
+  max_open_checks_per_cycle: 3      # 单轮开放词汇判定调用预算（ROADMAP Stage 2 前置：防规则数×独立调用打爆 vLLM）
+
+# ── 新行为备忘 (ROADMAP Stage 1)：事件级触发，描述体系外行为并落盘证据 ──
+novel_behavior:
+  enabled: true
+  window_seconds: 5                 # 取告警前后 ±N 秒环形缓冲帧
+  scene_frames: 4                   # 场景帧数
+  crop_frames: 3                    # person crop 帧数（原帧缓冲）
+  max_image_px: 768
+  gray_low: 0.40                    # 触发器B：Normal 且置信度落此区间 → 分类器"说不清"
+  gray_high: 0.55
+  track_cooldown_frames: 200        # 同一目标两次备忘的最小处理帧间隔
+  activity_cooldown_seconds: 60     # 同一叙述活动指纹的最小视频时间间隔
+  max_queue: 3
+  max_latency_ms: 20000
+  failure_backoff_seconds: 30
+
+# ── 行为原型库 (ROADMAP Stage 2)：备忘聚类 → VLM 起名 → 人工终审 → 自写规则 ──
+behavior_prototypes:
+  enabled: true
+  recall_floor: 0.55               # 嵌入召回下限（E2E 实测固定嵌入阈值无分离带：错误描述与
+                                   # 正确描述的词面距离可能更近；归簇精判由 VLM"是否同类动作"承担）
+  min_occurrences: 2               # 簇出现 N 次后转待命名（unknown_events 小样本验证集用 2；真实校园任务建议 3+）
+  vector_model_path: models/embedding/bge-small-zh-v1.5
+  device: cpu                      # 嵌入跑 CPU，不与用户 GPU 进程争资源
+  max_latency_ms: 20000
+
+# ── crop 多分类仲裁器（edge 决策模式，edge_migration/01 §2.3）──────────
+# 视觉判定确定性核心：edge 档下灰区仲裁与强制复核全部走此模型（毫秒级，OM/ONNX 双后端）
+crop_review:
+  model_path: models/crop/crop_v1.onnx   # T2.5 训练产物；开发期用玩具模型测链路
+  fallback_onnx: null
+  input_size: 224
+  classes: [Normal, M01, M02, H03, Wave, Throw, Handshake]
+  accept_conf: 0.60
+  reject_conf: 0.45
+  normal_rebate_conf: 0.75               # Normal 翻案门槛：弱证据不推翻 PC 异常判定
+  arbiter_classes: [M01, M02, H03]       # 仲裁类集：演示类(Wave/Throw/Handshake)不参与灰区仲裁
+  no_rebate_classes: [H03]               # Normal 不得翻案类：漏报代价>误报（教师偏差致 crop 对 H03 不可信）
+  class_thresholds:                      # 演示类域差大(HMDB运动场景)，高阈值防误触发；
+    Wave: 0.80                           # 它们服务时刻①布控，不参与吸烟/跌倒仲裁
+    Throw: 0.85
+    Handshake: 0.85
+  throttle_frames: 24   # 2026-11-05 盒上实测：crop CPU p95 41.9ms → 节流放宽一倍摊薄（OM shim 后可回调 12）
