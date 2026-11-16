@@ -24,7 +24,11 @@ models/embedding/
 *.tar.gz
 *.sha256
 
+# 文档目录
+docs/
+
 # 杂项
+*:Zone.Identifier
 .DS_Store
 .idea/
 .vscode/
