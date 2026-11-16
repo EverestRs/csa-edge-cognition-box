@@ -1,0 +1,19 @@
+# csa-ui.service — Streamlit 看板（:8501，演示机可选常驻）
+# 放置: /etc/systemd/system/csa-ui.service
+[Unit]
+Description=CSA Streamlit dashboard
+After=network-online.target csa-engine.service
+Wants=csa-engine.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/csa/campus_security_agent
+Environment=INFERENCE_PROFILE=edge
+ExecStart=/opt/csa/venv/bin/streamlit run demo/web_interface/app.py \
+  --server.address 0.0.0.0 --server.port 8501 --server.headless true
+Restart=always
+RestartSec=5
+User=csa
+
+[Install]
+WantedBy=multi-user.target

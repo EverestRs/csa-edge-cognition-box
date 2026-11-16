@@ -1,0 +1,54 @@
+models/detector/yolov8n.onnx
+models/detector/yolov8n_int8.onnx
+models/pose/vitpose_wholebody_s_int8.onnx
+models/pose/vitpose_wholebody_s.onnx
+models/action_v2/pose_classifier.onnx
+models/action_v2/train_metrics.json
+models/crop/crop_v1.onnx
+models/crop/crop_v1.json
+models/embedding/bge-small-zh-v1.5/tokenizer_config.json
+models/embedding/bge-small-zh-v1.5/sentence_bert_config.json
+models/embedding/bge-small-zh-v1.5/config.json
+models/embedding/bge-small-zh-v1.5/config_sentence_transformers.json
+models/embedding/bge-small-zh-v1.5/tokenizer.json
+models/embedding/bge-small-zh-v1.5/modules.json
+models/embedding/bge-small-zh-v1.5/special_tokens_map.json
+models/embedding/bge-small-zh-v1.5/1_Pooling/config.json
+results/vlm_labels_test/all_vlm_labels.json
+results/vlm_labels_test/whole_process_corner_3_vlm_labels.json
+results/vlm_labels_test/whole_process_entrance_3_vlm_labels.json
+results/edge_m0/g5_llm_smoke_7b_baseline.json
+results/edge_m0/smoke_crop_toy.onnx
+results/edge_m0/toy_crop_v0.onnx
+results/edge_m0/g1_mem.json
+results/edge_m0/g6_gru_latency.json
+results/edge_m0/selftest_toy.onnx
+results/edge_m0/g4_crop_latency.json
+results/edge_m0/g2_decode.json
+results/edge_m0/g3_atc_om.json
+results/edge_test/edge_engine_smoke_realmodel.json
+results/edge_test/edge_engine_smoke_corner3.json
+results/edge_test/edge_engine_smoke_final.json
+results/edge_test/edge_engine_smoke.json
+results/edge_test/decision_parity_smoking_forward_1-1.json
+results/edge_test/edge_engine_smoke_smoking.json
+results/edge_test/bench_edge_smoke.json
+results/edge_test/language_layer_smoke.json
+results/crop_dataset/thresholds_tuned.json
+test/whole_process_corner_3.mp4
+test/whole_process_entrance_3.mp4
+data/smoking_forward_1-1.mp4
+data/smoking_corner_1-1.mp4
+data/laying_forward_1-1.mp4
+data/laying_corner_1-1.mp4
+data/whole_process_corner_1.mp4
+data/whole_process_forward_2.mp4
+
+# ── 盒上解包用法 ────────────────────────────────────────────
+# 校验:  sha256sum -c csa_edge_bundle_20261104.tar.gz.sha256
+# 解包:  mkdir -p /opt/csa && tar xzf csa_edge_bundle_20261104.tar.gz -C /opt/csa
+#        (归档内路径 campus_security_agent/ 与 test/、data/ 均落在 /opt/csa 下；
+#         configs/edge_migration 脚本按 ../data、../test 相对路径取视频，保持一致)
+# 随后:  bash edge_migration/scripts/env_probe.sh → g1_mem.sh → g2_decode_bench → 
+#        bash tools/export_om_atlas.sh → deploy/README.md 装 systemd → bench_edge.py
+# 未含:  llama.cpp 源码、Qwen GGUF、pip wheel、Mosquitto deb——另行拷贝（见到场清单）

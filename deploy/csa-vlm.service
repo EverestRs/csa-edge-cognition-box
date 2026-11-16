@@ -1,0 +1,22 @@
+# csa-vlm.service — 盒上文本 LLM（llama.cpp llama-server，OpenAI 兼容 :8001）
+# 放置: /etc/systemd/system/csa-vlm.service
+[Unit]
+Description=CSA edge text LLM (llama-server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# GGUF 路径按实际下载位置调整；threads=3 给感知编排(A55)留核
+ExecStart=/opt/csa/llama.cpp/build/bin/llama-server \
+  -m /opt/csa/models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
+  --model-name qwen2.5-1.5b-instruct \
+  --host 127.0.0.1 --port 8001 --ctx-size 2048 --threads 3 \
+  --temp 0.1 --top-p 0.9
+Restart=always
+RestartSec=5
+User=csa
+WorkingDirectory=/opt/csa/campus_security_agent
+
+[Install]
+WantedBy=multi-user.target

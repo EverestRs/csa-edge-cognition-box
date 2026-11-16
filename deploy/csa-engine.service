@@ -1,0 +1,20 @@
+# csa-engine.service — 边缘推理引擎 + FastAPI（:8000）
+# 放置: /etc/systemd/system/csa-engine.service
+[Unit]
+Description=CSA edge inference engine (FastAPI)
+After=network-online.target csa-vlm.service mosquitto.service
+Wants=network-online.target csa-vlm.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/csa/campus_security_agent
+Environment=INFERENCE_PROFILE=edge
+# demo.enabled 由 configs/model_config.yaml 控制；拍摄/演示日可加：Environment=CSA_DEMO=1
+ExecStartPre=/opt/csa/venv/bin/python -c "import requests; requests.get('http://127.0.0.1:8001/v1/models', timeout=2)" || true
+ExecStart=/opt/csa/venv/bin/python run.py
+Restart=always
+RestartSec=5
+User=csa
+
+[Install]
+WantedBy=multi-user.target

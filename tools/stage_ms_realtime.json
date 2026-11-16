@@ -1,0 +1,43 @@
+﻿{
+    "profile":  "realtime",
+    "task_id":  "task_d421c9ff",
+    "status":  "finished",
+    "last_frame":  114,
+    "stream_stats":  {
+                         "read_frames":  115,
+                         "inference_frames":  52,
+                         "encoded_frames":  18,
+                         "pushed_frames":  18,
+                         "last_processed_frame_id":  114,
+                         "dropped_frames_decode":  62,
+                         "dropped_frames_result":  0,
+                         "dropped_frames_packet":  0,
+                         "max_fps":  8.0,
+                         "startup_no_drop_seconds":  1.5,
+                         "frame_stride":  4,
+                         "push_stride":  3,
+                         "stage_ms":  {
+                                          "stage_a_decode":  {
+                                                                 "avg_ms":  17.918,
+                                                                 "max_ms":  599.394,
+                                                                 "count":  115
+                                                             },
+                                          "stage_b_inference":  {
+                                                                    "avg_ms":  123.15,
+                                                                    "max_ms":  846.671,
+                                                                    "count":  52
+                                                                },
+                                          "stage_c_encode":  {
+                                                                 "avg_ms":  1.918,
+                                                                 "max_ms":  2.814,
+                                                                 "count":  18
+                                                             },
+                                          "stage_d_push":  {
+                                                               "avg_ms":  0.041,
+                                                               "max_ms":  0.104,
+                                                               "count":  17,
+                                                               "sleep_ms_total":  408.0
+                                                           }
+                                      }
+                     }
+}

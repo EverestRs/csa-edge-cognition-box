@@ -1,0 +1,24 @@
+# Atlas 200I DK A2（aarch64 / Ubuntu 22.04 / CANN）盒上运行依赖
+# 与主 requirements.txt 保持版本就近；aarch64 无对应 wheel 时允许就近小版本（见 ENV_LOCK.md）。
+# 说明：pyACL 随 CANN 提供，不在 pip 内；llama.cpp 需源码编译（aarch64），见 ENV_LOCK。
+# 盒上首次部署实测（2026-11-05 FIELD_READOUT D5）：引擎 import 链必需但不在此前的清单——
+torch / torchvision（aarch64 用 PyTorch 官方或清华镜像的 cpu/aarch64 轮）、transformers、
+jieba、rank_bm25、onnx 已补入下方；盒 csa 环境实际安装版本记录进 ENV_LOCK。
+opencv-python-headless==4.11.0.86    # 必须带 FFMPEG 编解码后端（g2 探针 A/B 档）
+numpy==1.26.4                        # CANN 6.2 TBE 工具链约束（会商项E：系统 python3.10 同装）
+onnxruntime==1.23.2                  # aarch64 官方 wheel
+paho-mqtt==2.1.0                     # edge_migration.mqtt_bridge
+pyyaml==6.0.2
+psutil==7.0.0                        # 探针 CPU 口径 / npu_telemetry
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
+streamlit==1.48.1
+websockets==15.0.1
+requests
+torch                               # D5：GRU ONNX 训练侧 import 链 + tune 工具
+torchvision                           # D5：crop 模型训练/export
+transformers                          # D5：SceneIndex bge 嵌入
+jieba                                 # D5：BM25 分词
+rank_bm25                             # D5：检索
+onnx                                  # D5：toy/export 工具链

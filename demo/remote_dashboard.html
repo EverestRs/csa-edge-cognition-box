@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>慧眼智警 · 远程 MQTT 看板</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px; font:15px/1.55 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+         background:#0d1117; color:#e6edf3; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:18px; }
+  h1 { font-size:20px; margin:0; }
+  .sub { color:#8b949e; font-size:13px; }
+  .spacer { flex:1; }
+  .badge { padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+  .on { background:#1b4721; color:#7ee787; border:1px solid #2ea043; }
+  .off { background:#4a1d1d; color:#ff7b72; border:1px solid #da3633; }
+  .linkbtn { padding:5px 12px; border-radius:8px; font-size:13px; text-decoration:none;
+             color:#c9d1d9; border:1px solid #30363d; background:#161b22; }
+  .linkbtn:hover { border-color:#2f81f7; color:#e6edf3; }
+  .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); margin-bottom:18px; }
+  .card { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:14px 16px; }
+  .card .k { color:#8b949e; font-size:12px; margin-bottom:6px; }
+  .card .v { font-size:24px; font-weight:650; letter-spacing:.5px; }
+  .card .u { font-size:12px; color:#8b949e; margin-left:3px; }
+  .panel { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:14px 16px; margin-bottom:16px; }
+  .panel h2 { font-size:14px; margin:0 0 10px; color:#c9d1d9; font-weight:600; }
+  #events { max-height:340px; overflow-y:auto; font-size:13px; }
+  .ev { display:flex; gap:10px; padding:7px 4px; border-bottom:1px dashed #21262d; }
+  .ev .t { color:#8b949e; min-width:64px; }
+  .ev .type { min-width:96px; font-weight:600; }
+  .ev .rule { color:#c9d1d9; }
+  .ev.high .type { color:#ff7b72; }
+  .ev.mid .type { color:#f0b72f; }
+  .ev.low .type { color:#7ee787; }
+  .empty { color:#6e7681; font-size:13px; padding:8px 2px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  input, button { font:14px inherit; border-radius:8px; border:1px solid #30363d; padding:8px 10px;
+                  background:#0d1117; color:#e6edf3; }
+  input { flex:1; min-width:240px; }
+  button { cursor:pointer; background:#1f6feb; border-color:#1f6feb; color:#fff; font-weight:600; }
+  button:hover { background:#2f81f7; }
+  #log { font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; color:#8b949e; max-height:110px;
+         overflow-y:auto; white-space:pre-wrap; }
+  .tip { color:#6e7681; font-size:12px; margin-top:8px; }
+  .charts { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  .chart { background:#0d1117; border:1px solid #21262d; border-radius:8px; padding:10px 12px; }
+  .chart .h { display:flex; justify-content:space-between; align-items:baseline; font-size:12px;
+              color:#8b949e; margin-bottom:6px; }
+  .chart .h b { color:#e6edf3; font-weight:650; font-size:15px; }
+  .chart canvas { width:100%; height:72px; display:block; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>慧眼智警 · 远程 MQTT 看板</h1>
+  </div>
+  <div class="spacer"></div>
+  <a id="uiLink" class="linkbtn" href="#" target="_blank" rel="noopener">← 全功能操作台</a>
+  <span id="conn" class="badge off">连接中…</span>
+</header>
+
+<div class="grid">
+  <div class="card"><div class="k">板级功耗</div><div class="v"><span id="power">-</span><span class="u">W</span></div></div>
+  <div class="card"><div class="k">NPU 温度</div><div class="v"><span id="temp">-</span><span class="u">℃</span></div></div>
+  <div class="card"><div class="k">当前人数</div><div class="v"><span id="persons">-</span><span class="u">人</span></div></div>
+  <div class="card"><div class="k">文本 LLM</div><div class="v" id="llm" style="font-size:19px;">-</div></div>
+</div>
+
+<div class="panel">
+  <h2>遥测实时曲线（最近 5 分钟）</h2>
+  <div class="charts">
+    <div class="chart"><div class="h"><span>板级功耗</span><b><span id="cPower">-</span> W</b></div><canvas id="chartPower"></canvas></div>
+    <div class="chart"><div class="h"><span>NPU 温度</span><b><span id="cTemp">-</span> ℃</b></div><canvas id="chartTemp"></canvas></div>
+    <div class="chart"><div class="h"><span>NPU 算力占用</span><b><span id="cAi">-</span> %</b></div><canvas id="chartAi"></canvas></div>
+    <div class="chart"><div class="h"><span>画面人数</span><b><span id="cPersons">-</span> 人</b></div><canvas id="chartPersons"></canvas></div>
+  </div>
+  <div class="tip">数据源：csa/<span class="boxName">edge1</span>/status（每秒 1 点）；曲线在本页面打开期间累积，刷新后重新记录。</div>
+</div>
+
+<div class="panel">
+  <h2>告警事件流（<span id="evCount">0</span>）</h2>
+  <div id="events"><div class="empty">等待 csa/edge1/event …</div></div>
+</div>
+
+<div class="panel">
+  <h2>远程布控下发（csa/<span id="boxLabel">edge1</span>/rule/set）</h2>
+  <div class="row">
+    <input id="ruleText" placeholder="例如：告警有人吸烟" value="告警有人吸烟">
+    <button id="sendBtn">下发规则</button>
+  </div>
+  <div class="tip">下发后由盒上语言层解析并热部署，回执见 csa/<span id="boxLabel2">edge1</span>/rule/ack。</div>
+</div>
+
+<div class="panel">
+  <h2>连接日志</h2>
+  <div id="log"></div>
+  <div class="tip">Broker：<span id="brokerAddr">-</span>　｜　主题：csa/#　｜　最后消息：<span id="lastMsg">-</span></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  // 打开方式：http://<盒子IP>:8000/remote ；也支持直接 file:// 打开（用默认地址）
+  var host = (location.hostname && location.hostname !== "") ? location.hostname : "192.168.137.2";
+  var WS_PORT = 9001;
+  var BROKER = "ws://" + host + ":" + WS_PORT + "/mqtt";
+  var BOX = "edge1";
+  var clientId = "csa-web-" + Math.random().toString(16).slice(2, 10);
+  var ws = null, connected = false, pingTimer = null, retry = 0, msgCount = 0;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function log(msg) {
+    var el = $("log");
+    var line = "[" + new Date().toLocaleTimeString() + "] " + msg + "\n";
+    el.textContent = (line + el.textContent).slice(0, 4000);
+  }
+  function setConn(ok, text) {
+    var b = $("conn");
+    b.className = "badge " + (ok ? "on" : "off");
+    b.textContent = text;
+  }
+
+  // ── 遥测曲线（纯 canvas，无外部依赖；环形缓冲 300 点 = 5 分钟 @1Hz）──
+  var MAXPTS = 300;
+  var series = { power: [], temp: [], ai: [], persons: [] };
+  function addPoint(arr, v) {
+    arr.push(v);
+    if (arr.length > MAXPTS) arr.shift();
+  }
+  function drawChart(id, arr, color) {
+    var cv = $(id);
+    if (!cv || !cv.clientWidth) return;
+    var dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = 72;
+    if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    var g = cv.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    g.strokeStyle = "#21262d"; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, h - 0.5); g.lineTo(w, h - 0.5); g.stroke();
+    if (arr.length < 2) return;
+    var lo = Infinity, hi = -Infinity, i, v;
+    for (i = 0; i < arr.length; i++) { v = arr[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
+    if (hi - lo < 1) { var m = (hi + lo) / 2; lo = m - 0.5; hi = m + 0.5; }
+    var pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+    var X = function (idx) { return 1 + idx * (w - 2) / (MAXPTS - 1); };
+    var Y = function (val) { return h - 2 - (val - lo) / (hi - lo) * (h - 6); };
+    g.beginPath();
+    for (i = 0; i < arr.length; i++) { if (i) g.lineTo(X(i), Y(arr[i])); else g.moveTo(X(i), Y(arr[i])); }
+    g.strokeStyle = color; g.lineWidth = 1.6; g.stroke();
+    g.lineTo(X(arr.length - 1), h - 1); g.lineTo(X(0), h - 1); g.closePath();
+    g.fillStyle = color + "22"; g.fill();
+    g.fillStyle = color;
+    g.beginPath(); g.arc(X(arr.length - 1), Y(arr[arr.length - 1]), 2.4, 0, 6.2832); g.fill();
+  }
+  function drawAll() {
+    drawChart("chartPower", series.power, "#58a6ff");
+    drawChart("chartTemp", series.temp, "#f0883e");
+    drawChart("chartAi", series.ai, "#bc8cff");
+    drawChart("chartPersons", series.persons, "#7ee787");
+  }
+
+  // ── 最小 MQTT 3.1.1 编码（仅本页所需：CONNECT/SUBSCRIBE/PUBLISH/PING）──
+  function encLen(n) {
+    var out = [];
+    do { var b = n % 128; n = Math.floor(n / 128); if (n > 0) b |= 0x80; out.push(b); } while (n > 0);
+    return Uint8Array.from(out);
+  }
+  function utf8(s) {
+    var b = new TextEncoder().encode(s), r = new Uint8Array(2 + b.length);
+    r[0] = (b.length >> 8) & 255; r[1] = b.length & 255; r.set(b, 2); return r;
+  }
+  function join(parts) {
+    var n = 0, i;
+    for (i = 0; i < parts.length; i++) n += parts[i].length;
+    var r = new Uint8Array(n), off = 0;
+    for (i = 0; i < parts.length; i++) { r.set(parts[i], off); off += parts[i].length; }
+    return r;
+  }
+  function packet(type, flags, parts) {
+    var body = join(parts), len = encLen(body.length);
+    var r = new Uint8Array(1 + len.length + body.length);
+    r[0] = (type << 4) | flags;
+    r.set(len, 1); r.set(body, 1 + len.length);
+    return r;
+  }
+
+  function connect() {
+    setConn(false, "连接中…");
+    try { ws = new WebSocket(BROKER, "mqtt"); ws.binaryType = "arraybuffer"; }
+    catch (e) { log("WebSocket 创建失败：" + e); return; }
+
+    ws.onopen = function () {
+      // CONNECT: 协议名 MQTT / level 4 / cleanSession / keepalive 60
+      var body = join([utf8("MQTT"), Uint8Array.from([4, 0x02]), Uint8Array.from([0, 60]), utf8(clientId)]);
+      ws.send(packet(1, 0, [body]));
+      log("WebSocket 已建立 -> " + BROKER + "，发送 CONNECT");
+    };
+    ws.onmessage = function (ev) {
+      var buf = new Uint8Array(ev.data);
+      var i = 0;
+      while (i < buf.length) {
+        var type = buf[i] >> 4, flags = buf[i] & 15, mult = 1, rem = 0, p = i + 1, d;
+        do { d = buf[p++]; rem += (d & 127) * mult; mult *= 128; } while (d & 128);
+        var body = buf.subarray(p, p + rem);
+        i = p + rem;
+        handle(type, flags, body);
+      }
+    };
+    ws.onclose = function () {
+      connected = false; setConn(false, "已断开");
+      if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+      retry = Math.min(retry + 1, 6);
+      var wait = Math.min(1 << retry, 20);
+      log("连接关闭，" + wait + "s 后重连");
+      setTimeout(connect, wait * 1000);
+    };
+    ws.onerror = function () { setConn(false, "连接错误"); };
+  }
+
+  function handle(type, flags, body) {
+    if (type === 2) { // CONNACK
+      if (body[1] !== 0) { log("CONNACK 拒绝，code=" + body[1]); return; }
+      connected = true; retry = 0; setConn(true, "已连接");
+      log("CONNACK 成功，订阅 csa/#");
+      var sub = join([Uint8Array.from([0, 1]), utf8("csa/#"), Uint8Array.from([0])]);
+      ws.send(packet(8, 2, [sub]));
+      if (pingTimer) clearInterval(pingTimer);
+      pingTimer = setInterval(function () { if (connected) ws.send(packet(12, 0, [])); }, 20000);
+      return;
+    }
+    if (type === 3) { // PUBLISH
+      var qos = (flags >> 1) & 3, off = 0;
+      var tl = (body[off] << 8) | body[off + 1]; off += 2;
+      var topic = new TextDecoder().decode(body.subarray(off, off + tl)); off += tl;
+      if (qos > 0) {
+        var pid = (body[off] << 8) | body[off + 1]; off += 2;
+        if (qos === 1 && ws && connected) ws.send(packet(4, 0, [Uint8Array.from([pid >> 8, pid & 255])]));
+      }
+      var text = new TextDecoder().decode(body.subarray(off));
+      msgCount++;
+      $("lastMsg").textContent = new Date().toLocaleTimeString();
+      onTopic(topic, text);
+      return;
+    }
+    if (type === 9) { log("SUBACK"); return; }
+  }
+
+  function onTopic(topic, text) {
+    var data = {};
+    try { data = JSON.parse(text); } catch (e) { return; }
+    if (topic.indexOf("/status") >= 0) {
+      if (typeof data.power_w === "number") { $("power").textContent = data.power_w.toFixed(1);
+        addPoint(series.power, data.power_w); $("cPower").textContent = data.power_w.toFixed(1); }
+      if (typeof data.temp_c === "number") { $("temp").textContent = data.temp_c;
+        addPoint(series.temp, data.temp_c); $("cTemp").textContent = data.temp_c; }
+      if (typeof data.ai_core_util_pct === "number") {
+        addPoint(series.ai, data.ai_core_util_pct); $("cAi").textContent = data.ai_core_util_pct; }
+      if (typeof data.persons === "number") { $("persons").textContent = data.persons;
+        addPoint(series.persons, data.persons); $("cPersons").textContent = data.persons; }
+      if (series.power.length + series.temp.length + series.ai.length + series.persons.length > 0) drawAll();
+      var llm = $("llm");
+      llm.textContent = data.llm_online ? "在线" : "离线";
+      llm.style.color = data.llm_online ? "#7ee787" : "#ff7b72";
+      return;
+    }
+    if (topic.indexOf("/event") >= 0) { addEvent(data); return; }
+    if (topic.indexOf("/rule/ack") >= 0) { log("规则回执：" + JSON.stringify(data)); return; }
+  }
+
+  function addEvent(d) {
+    var box = $("events");
+    var empty = box.querySelector(".empty");
+    if (empty) empty.remove();
+    var risk = (d.final_decision === "confirmed" || d.type === "alert") ? "high"
+             : (d.type === "nl_rule_hit" ? "mid" : "low");
+    var el = document.createElement("div");
+    el.className = "ev " + risk;
+    var t = d.ts ? new Date(d.ts * 1000).toLocaleTimeString() : "-";
+    el.innerHTML = '<span class="t">' + t + '</span>'
+                 + '<span class="type">' + (d.type || "event") + '</span>'
+                 + '<span class="rule">' + (d.rule_text || d.label || "")
+                 + (d.confidence != null ? "（" + Number(d.confidence).toFixed(2) + "）" : "")
+                 + '</span>';
+    box.insertBefore(el, box.firstChild);
+    while (box.children.length > 50) box.removeChild(box.lastChild);
+    $("evCount").textContent = box.children.length;
+  }
+
+  function sendRule() {
+    var text = $("ruleText").value.trim();
+    if (!text) return;
+    if (!connected) { log("未连接，无法下发"); return; }
+    var topic = "csa/" + BOX + "/rule/set";
+    var payload = new TextEncoder().encode(JSON.stringify({ rule_id: "web_" + Date.now(), text: text }));
+    ws.send(packet(3, 0, [utf8(topic), payload]));
+    log("已下发规则：" + text);
+  }
+
+  $("brokerAddr").textContent = BROKER;
+  $("uiLink").href = "http://" + host + ":8501";
+  $("boxLabel").textContent = BOX;
+  $("boxLabel2").textContent = BOX;
+  var bn = document.querySelectorAll(".boxName");
+  for (var bi = 0; bi < bn.length; bi++) bn[bi].textContent = BOX;
+  $("sendBtn").addEventListener("click", sendRule);
+  $("ruleText").addEventListener("keydown", function (e) { if (e.key === "Enter") sendRule(); });
+  window.addEventListener("resize", drawAll);
+  connect();
+})();
+</script>
+</body>
+</html>
