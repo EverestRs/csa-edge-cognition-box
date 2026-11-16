@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 运行产物（证据已精选进 evidence/）
+results/
+logs/
+*.log
+data/
+test/
+
+# 大权重（获取方式见 models/README.md 与 scripts/download_models.sh）
+models/**/*.onnx
+models/**/*.bin
+models/**/*.safetensors
+models/embedding/
+*.gguf
+
+# 交付物本身
+*.zip
+*.tar.gz
+*.sha256
+
+# 杂项
+.DS_Store
+.idea/
+.vscode/
