@@ -75,8 +75,8 @@ runtime:
   device: cuda
   backend: onnxruntime
   execution_provider: CUDAExecutionProvider
-  intra_op_num_threads: 4
-  inter_op_num_threads: 2
+  intra_op_num_threads: 3
+  inter_op_num_threads: 1
   graph_optimization_level: ORT_ENABLE_ALL
   enable_mem_pattern: true
   enable_cpu_mem_arena: false
@@ -92,6 +92,14 @@ inference:
   max_pose_tracks: 2
   action_stride: 6
   max_action_tracks: 2
+  fast_trigger_enabled: true
+  fast_trigger_aspect: 1.10
+  fast_trigger_max_height_ratio: 0.70
+  fast_trigger_torso_horizontal: 0.55
+  fast_trigger_drop_ratio: 0.08
+  fast_trigger_cooldown_seconds: 5
+  fast_confirm_geometry_seconds: 1.5
+  fast_reject_geometry_seconds: 1.0
   action_min_track_score: 0.30
   action_warmup_frames: 8
   action_min_track_age: 4
@@ -308,10 +316,16 @@ profiles:
     input_size: [960, 540]
     frame_stride: 2
     max_fps: 8
-    pose_stride: 12
-    max_pose_tracks: 3
-    action_stride: 12          # 盒上实测修正：GRU p95 175ms → 降频保帧率（2026-11-05 FIELD_READOUT G6）
+    pose_stride: 4             # 姿态 OM 已上 NPU；12→4 让快速触发/动作缓冲更新到 0.5s 级
+    max_pose_tracks: 2
+    action_stride: 24          # PC batch p95 ~300ms；12→24 降频，保留 2 个动作目标
     max_action_tracks: 2
+    fast_trigger_enabled: true
+    fast_trigger_aspect: 1.10          # 宽高比候选（排除 0.9x 的背景/远距站立框）
+    fast_trigger_max_height_ratio: 0.70 # 框高/画面高，允许近处躺姿
+    fast_trigger_torso_horizontal: 0.55 # 躯干垂直比，接近 0 为水平
+    fast_trigger_drop_ratio: 0.08       # 中心下沉/画面高，捕捉跌倒瞬间
+    fast_trigger_cooldown_seconds: 5
     action_min_track_score: 0.28
     action_warmup_frames: 8
     action_min_track_age: 4
@@ -329,7 +343,7 @@ profiles:
     detector_stride: 2          # 演示调参：4 → 2，框更新更连贯
     detector_max_skip_frames: 4
     detector_onnx_path: models/detector/yolov8n.om   # 盒上验证档(2026-11-05): FP32 OM parity 已过；int8 为 QLinear 格式 atc 转不动，待 Q/DQ 重导后回切
-    pose_onnx_path: models/pose/vitpose_wholebody_s_int8.onnx  # C: pose OM 待 Q/DQ 版，当前 CPU int8 直路
+    pose_onnx_path: models/pose/vitpose_wholebody_s_fp16_bs1.om  # FP16 OM, batch=1, 逐 track；回退改回 _s_int8.onnx
     action_onnx_path: models/action/slowfast_int8.onnx
 
   # ── throughput 档（参赛性能基准：全帧率检测吞吐，非演示用）──────────

@@ -37,6 +37,14 @@ except Exception:
 
 BGE_QUERY_INSTRUCTION = "为这个句子生成表示以用于检索相关文章："
 
+# 告警事件展示用中文映射（和录像聊天证据、场景检索共用）
+ALERT_TYPE_CN = {
+    "nl_rule_hit": "规则告警",
+    "h04_detected": "跌倒/极端危险告警",
+    "unknown_detected": "未知事件",
+}
+DECISION_CN = {"confirmed": "已确认", "rejected": "已排除", "uncertain": "不确定", "pending": "待确认"}
+
 
 def _tokenize(text: str) -> list[str]:
     text = (text or "").lower().strip()
@@ -96,6 +104,7 @@ class SceneIndex:
                             "doc_id": f"scene:{log_path.stem}:{line_no}",
                             "doc_type": "scene_narration",
                             "text": text,
+                            "summary": str(record.get("scene_summary", ""))[:100],
                             "task_id": record.get("task_id") or log_path.stem.replace("scene_log_", ""),
                             "frame_id": record.get("frame_id"),
                             "video_time_sec": record.get("video_time_sec"),
@@ -121,8 +130,25 @@ class SceneIndex:
             alert = event.get("alert", {})
             if not alert.get("triggered"):
                 continue
-            label = str(alert.get("type", "")).replace("_detected", "").upper()
-            text_parts = [str(alert.get("type", "")), label]
+            try:
+                from edge_migration.fact_compiler import CLASS_CN
+            except Exception:
+                CLASS_CN = {}
+            alert_type = str(alert.get("type", ""))
+            matched_class = str((event.get("rule") or {}).get("matched_class", "") or "")
+            rule_text = str(alert.get("rule_text", "") or (event.get("rule") or {}).get("rule_text", "") or "")
+            decision = str(alert.get("final_decision", "pending"))
+            decision_cn = DECISION_CN.get(decision, decision)
+            time_str = str(event.get("timestamp", "") or "")
+            if rule_text:
+                subject = f"规则告警「{rule_text}」"
+            elif matched_class:
+                subject = f"{CLASS_CN.get(matched_class, matched_class)}告警"
+            else:
+                subject = ALERT_TYPE_CN.get(alert_type, alert_type.replace("_detected", "") or "告警")
+            # 人读摘要放最前，保证证据卡第一眼可读；原始类型/规则/裁决文本仍保留给 BM25 匹配
+            summary = " · ".join(part for part in (subject, time_str, decision_cn) if part)
+            text_parts = [summary, matched_class, alert_type]
             adjudication = alert.get("adjudication") or {}
             if adjudication.get("description"):
                 text_parts.append(str(adjudication["description"]))
@@ -131,9 +157,8 @@ class SceneIndex:
             top_behavior = ""
             detections = event.get("detections", [])
             if detections:
-                main_det = max(detections, key=lambda d: float(d.get("behavior", {}).get("confidence", 0.0)))
-                behavior = main_det.get("behavior", {})
-                top_behavior = f"{behavior.get('type', '')} {behavior.get('role', '')}"
+                main_det = max(detections, key=lambda d: float(d.get("confidence", 0.0) or 0.0))
+                top_behavior = str(main_det.get("label", "") or "")
                 text_parts.append(top_behavior)
             text = " ".join(part for part in text_parts if part).strip()
             if not text:
@@ -142,13 +167,15 @@ class SceneIndex:
                 "doc_id": f"event:{event_path.stem}",
                 "doc_type": "alert_event",
                 "text": text,
+                "summary": summary,
                 "task_id": event.get("task_id"),
                 "frame_id": event.get("frame_id"),
-                "video_time_sec": None,
-                "wall_time": str(event.get("timestamp", "")),
-                "alert_type": alert.get("type", ""),
-                "final_decision": alert.get("final_decision", "pending"),
-                "highlight": adjudication.get("description") or f"告警 {label}（决策: {alert.get('final_decision', 'pending')}）",
+                "video_time_sec": event.get("video_time_sec"),
+                "wall_time": time_str,
+                "alert_type": alert_type,
+                "alert_label": subject,
+                "final_decision": decision,
+                "highlight": summary,
             })
         return docs
 

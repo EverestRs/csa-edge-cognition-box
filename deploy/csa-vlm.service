@@ -7,10 +7,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# GGUF 路径按实际下载位置调整；threads=3 给感知编排(A55)留核
+# GGUF 路径按实际下载位置调整；0.5B 为盒上实测档，threads=3 给感知编排(A55)留核
 ExecStart=/opt/csa/llama.cpp/build/bin/llama-server \
-  -m /opt/csa/models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
-  --model-name qwen2.5-1.5b-instruct \
+  -m /opt/csa/models/qwen2.5-0.5b-instruct-q4_0.gguf \
+  --model-name qwen2.5-0.5b-instruct \
   --host 127.0.0.1 --port 8001 --ctx-size 2048 --threads 3 \
   --temp 0.1 --top-p 0.9
 Restart=always

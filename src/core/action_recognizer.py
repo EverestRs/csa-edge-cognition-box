@@ -3,6 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict, deque
 from pathlib import Path
+import threading
 from typing import Any
 
 import cv2
@@ -64,6 +65,8 @@ class ActionRecognizer:
         self.runtime_input_shapes: dict[str, list[int | None]] = {}
         self.runtime_output_names: list[str] = []
         self.session_init_error = ""
+        self._pc_is_om = False  # PoseClassifier 是否为固定 batch=1 的 Ascend OM
+        self._pc_session_lock = threading.Lock()  # 异步 worker 与单帧路径互斥
         self.session = self._build_session(self.onnx_path_resolved)
         self.is_real_model_loaded = self.session is not None
         self.is_pose_model = False
@@ -158,7 +161,8 @@ class ActionRecognizer:
 
             input_name = self.pose_classifier_session.get_inputs()[0].name
             output_names = [o.name for o in self.pose_classifier_session.get_outputs()]
-            outputs = self.pose_classifier_session.run(output_names, {input_name: tensor})
+            with self._pc_session_lock:
+                outputs = self.pose_classifier_session.run(output_names, {input_name: tensor})
             logits = np.array(outputs[0], dtype=np.float32).squeeze()  # (11,)
 
             probs = self._softmax(logits)
@@ -182,6 +186,47 @@ class ActionRecognizer:
             })
             return "Normal", 0.0
 
+    def build_pose_tensor(self, track_id: str) -> np.ndarray | None:
+        """复制一个 track 的姿态 clip，供异步 worker 使用（不共享 deque）。"""
+        frames = list(self.track_pose_buffers[track_id])
+        if len(frames) < self.input_clip_len:
+            return None
+        try:
+            clip = np.stack(frames[-self.input_clip_len:], axis=0).astype(np.float32)
+            return np.expand_dims(clip, axis=0)
+        except Exception:
+            return None
+
+    def infer_pose_classifier_tensors(self, tensors: list[np.ndarray]) -> list[tuple[str, float]]:
+        """对预构建的 [1,T,V,3] 张量跑 PoseClassifier；异步 worker 专用。"""
+        if not self.pose_classifier_loaded or not tensors:
+            return [("Normal", 0.0) for _ in tensors]
+        try:
+            input_name = self.pose_classifier_session.get_inputs()[0].name
+            output_names = [o.name for o in self.pose_classifier_session.get_outputs()]
+            with self._pc_session_lock:
+                if self._pc_is_om:
+                    logits_list = []
+                    for tensor in tensors:
+                        outputs = self.pose_classifier_session.run(output_names, {input_name: tensor})
+                        arr = np.array(outputs[0], dtype=np.float32)
+                        logits_list.append(arr[0] if arr.ndim == 2 else arr)
+                    logits = np.stack(logits_list, axis=0)
+                else:
+                    batch_tensor = np.concatenate(tensors, axis=0).astype(np.float32)
+                    outputs = self.pose_classifier_session.run(output_names, {input_name: batch_tensor})
+                    logits = np.array(outputs[0], dtype=np.float32)
+            results: list[tuple[str, float]] = []
+            for i in range(len(tensors)):
+                probs = self._softmax(logits[i])
+                top_index = int(np.argmax(probs))
+                confidence = float(probs[top_index])
+                label = self.DIRECT_CLASSES[top_index] if top_index < len(self.DIRECT_CLASSES) else "Normal"
+                results.append((label, round(confidence, 2)))
+            return results
+        except Exception:
+            return [("Normal", 0.0) for _ in tensors]
+
     def infer_pose_classifier_batch(self, track_ids: list[str]) -> list[tuple[str, float]]:
         """PoseClassifier 批次推理。"""
         if not self.pose_classifier_loaded or self.pose_classifier_session is None:
@@ -202,11 +247,20 @@ class ActionRecognizer:
             return results
 
         try:
-            batch_tensor = np.concatenate(tensors, axis=0).astype(np.float32)
             input_name = self.pose_classifier_session.get_inputs()[0].name
             output_names = [o.name for o in self.pose_classifier_session.get_outputs()]
-            outputs = self.pose_classifier_session.run(output_names, {input_name: batch_tensor})
-            logits = np.array(outputs[0], dtype=np.float32)  # (B, 11)
+            if self._pc_is_om:
+                # OM 固定 batch=1：逐 track 调用，避免 batch=2 写入 batch=1 buffer
+                logits_list = []
+                for tensor in tensors:
+                    outputs = self.pose_classifier_session.run(output_names, {input_name: tensor})
+                    arr = np.array(outputs[0], dtype=np.float32)
+                    logits_list.append(arr[0] if arr.ndim == 2 else arr)
+                logits = np.stack(logits_list, axis=0)
+            else:
+                batch_tensor = np.concatenate(tensors, axis=0).astype(np.float32)
+                outputs = self.pose_classifier_session.run(output_names, {input_name: batch_tensor})
+                logits = np.array(outputs[0], dtype=np.float32)  # (B, 11)
 
             for i, idx in enumerate(valid_indices):
                 if logits.ndim == 2 and i < logits.shape[0]:
@@ -344,6 +398,21 @@ class ActionRecognizer:
         return str((project_root / path).resolve())
 
     def _build_session(self, onnx_path: str):
+        if onnx_path.endswith(".om"):
+            try:
+                from edge_migration.inference_backend import ort_compatible_om_session
+            except Exception as exc:
+                self.session_init_error = f"edge_backend_import_failed: {exc}"
+                return None
+            adapter, err = ort_compatible_om_session(
+                onnx_path, device_id=int(self.runtime_cfg.get("npu_device_id", 0)))
+            if adapter is not None:
+                if onnx_path == getattr(self, "pose_classifier_onnx_resolved", ""):
+                    self._pc_is_om = True
+                return adapter
+            self.session_init_error = f"om_unavailable: {err}"
+            return None
+
         if ort is None:
             self.session_init_error = "onnxruntime_import_failed"
             return None
@@ -399,6 +468,12 @@ class ActionRecognizer:
                     session_options.intra_op_num_threads = intra_threads
                 if inter_threads > 0:
                     session_options.inter_op_num_threads = inter_threads
+                # 低频调用模型关闭 ORT 线程池自旋，避免空档期白吃 CPU
+                try:
+                    session_options.add_session_config_entry("session.intra_op.allow_spinning", "0")
+                    session_options.add_session_config_entry("session.inter_op.allow_spinning", "0")
+                except Exception:
+                    pass
                 session_options.enable_mem_pattern = bool(self.runtime_cfg.get("enable_mem_pattern", True))
                 session_options.enable_cpu_mem_arena = bool(self.runtime_cfg.get("enable_cpu_mem_arena", True))
                 return ort.InferenceSession(str(path), sess_options=session_options, providers=providers)

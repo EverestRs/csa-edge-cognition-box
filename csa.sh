@@ -50,10 +50,11 @@ start_one() {
       echo $! >"$RUN_DIR/broker.pid"
       ;;
     llm)
-      # LLM 不绑核：token 生成是计算密集，绑单核+nice19 会饿死（实测 trivial 请求 45s 超时）。
-      # 靠 nice 19 让位于实时推理链路即可，可自由使用核 0-2 的空闲算力。
+      # LLM 不绑核：token 生成是计算密集，绑单核会饿死（实测 trivial 请求 45s 超时）。
+      # nice 5（非 19）：nice 19 在引擎满载时生成掉到 ~1.2 tok/s，叙述/裁决会拖过超时窗口；
+      # nice 5 仍低于引擎（0），但能拿到足够 CPU，实测生成恢复到可用水平。
       setsid "$LLAMA_BIN" -m "$LLAMA_MODEL" \
-        --host 127.0.0.1 --port 8001 --ctx-size 2048 --threads 3 \
+        --host 127.0.0.1 --port 8001 --ctx-size 2048 --threads 3 --parallel 1 \
         --temp 0.1 --top-p 0.9 >>"$LOG_DIR/llm.log" 2>&1 &
       echo $! >"$RUN_DIR/llm.pid"
       ;;
@@ -61,7 +62,7 @@ start_one() {
       (
         set +u; source "$CANN_ENV" >/dev/null 2>&1; set -u
         cd "$BASE" || exit 1
-        export OPENCV_FFMPEG_CAPTURE_OPTIONS="threads;4"  # 多线程软解，吃空闲核保 30fps 取流
+        export OPENCV_FFMPEG_CAPTURE_OPTIONS="threads;3"  # 3 可用核（核 3 留给 NPU），解码线程不超订
         # 绑核策略（实测 A/B 后定）：引擎不绑（可用 CtrlCPU 全部 0-2，线程多绑 2 核反而内卷）；
         # LLM/看板绑核 0 + nice 19 关进角落。核 3 由华为官方 cpuset 预留 NPU 驱动（AICPU/DataCPU）。
         INFERENCE_PROFILE=edge setsid "$PY" run.py >>"$LOG_DIR/engine.log" 2>&1 &
@@ -83,7 +84,7 @@ start_one() {
   case "$name" in
     broker) wait_port 1883 10 && wait_port 9001 5 || ok=0 ;;
     llm)    wait_http http://127.0.0.1:8001/v1/models 90 || ok=0
-            [ "$ok" = 1 ] && renice -n 19 -p "$pid" >/dev/null 2>&1 ;;
+            [ "$ok" = 1 ] && renice -n 5 -p "$pid" >/dev/null 2>&1 ;;
     engine) wait_http http://127.0.0.1:8000/health 150 || ok=0 ;;
     ui)     wait_port 8501 60 || ok=0 ;;
   esac

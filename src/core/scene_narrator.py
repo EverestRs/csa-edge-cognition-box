@@ -48,15 +48,17 @@ DEFAULT_SUMMARY_PROMPT = (
     "[历史描述]\n{entries}\n\n直接输出摘要内容，不要任何前后缀。"
 )
 
-# edge facts 模式（T3.2）：不发图，结构化观测事实是唯一信息源（EDGE v3.0"语言只做语言"）
+# facts 模式（T3.2）：不发图，结构化观测事实是唯一信息源（EDGE v3.0"语言只做语言"）
 # 注意：JSON 示例花括号必须双写（{{ }}）——本模板经 .format() 注入 facts_json
+# 注意：可变的事实 JSON 必须放在提示词末尾——llama-server 按前缀复用 KV 缓存，
+# 静态指令在前可让后续叙述的 prompt eval 只处理末尾事实（0.5B 上从 ~40s 降到几秒）
 FACTS_NARRATE_PROMPT = (
-    "你是校园监控系统的场景分析员。以下是该时间窗口内行为检测模块输出的结构化观测事实"
-    "（JSON），它是你唯一的信息来源：\n{facts_json}\n"
-    "请仅依据事实输出JSON（不要包含任何其他文字）：\n"
-    '{{"scene_summary": "逐人客观描述（只可复述事实中出现的行为名/人数，禁止推断画面外观与身份）", '
-    '"notable_activities": ["事实中标记为异常的行为，逐条列出，无则空数组"], '
-    '"environment": "事实中无环境信息，填「未知」"}}'
+    "你是校园监控场景分析员。只可复述最后给出的结构化事实，禁止推断画面外观或身份。\n"
+    "只输出JSON，不要其他文字：\n"
+    '{{"scene_summary":"逐人客观描述（只可复述事实中的人数与行为名）",'
+    '"notable_activities":["事实中标记为异常的行为，无则空数组"],'
+    '"environment":"未知"}}\n'
+    "[结构化事实]\n{facts_json}"
 )
 
 
@@ -68,7 +70,8 @@ class SceneNarrator:
         self.frames_per_narration = int(max(2, cfg.get("frames_per_narration", 4)))
         self.summary_window = int(max(2, cfg.get("summary_window", 10)))
         self.summary_refresh_every = int(max(1, cfg.get("summary_refresh_every", 5)))
-        self.max_latency_ms = int(cfg.get("max_latency_ms", 15000))
+        self.max_latency_ms = int(cfg.get("max_latency_ms", 60000))
+        self.max_tokens = int(max(64, cfg.get("max_tokens", 160)))
         self.max_image_px = int(cfg.get("max_image_px", 512))
         self.backoff_seconds = float(cfg.get("failure_backoff_seconds", 30))
         # T3.2: facts 模式——叙述信息源从"关键帧图像"切换为"结构化观测事实"
@@ -262,7 +265,7 @@ class SceneNarrator:
                 model=self.model_name,
                 prompt=prompt,
                 frames=chat_frames,
-                max_tokens=512,
+                max_tokens=self.max_tokens,
                 timeout=self.max_latency_ms / 1000.0,
                 max_image_px=self.max_image_px,
             )
@@ -335,7 +338,7 @@ class SceneNarrator:
                 model=self.model_name,
                 prompt=DEFAULT_SUMMARY_PROMPT.format(entries=entries),
                 frames=None,
-                max_tokens=256,
+                max_tokens=max(64, self.max_tokens // 2),
                 timeout=self.max_latency_ms / 1000.0,
             )
             with self._lock:
@@ -364,6 +367,9 @@ class SceneNarrator:
             self._log_path.parent.mkdir(parents=True, exist_ok=True)
             self._next_trigger_frame = None
             self._pending_push = None
+            # 新任务清掉上个任务的失败态/退避，避免 UI 继续显示旧的“异常”
+            self._last_error = ""
+            self._backoff_until = 0.0
             self._narrations.clear()
             self._entries_since_summary = 0
             self._rolling_summary = ""

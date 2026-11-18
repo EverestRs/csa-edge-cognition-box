@@ -33,12 +33,17 @@ SCENE_CHAT_PROMPT = (
     "你是校园监控系统的问答助手。以下是系统场景记忆中检索到的历史记录（JSON 数组，"
     "按时间排序），它们是你唯一的信息来源：\n{context_json}\n"
     "用户问题：{question}\n"
-    "要求：1) 只可复述/整合记录中出现的Time、行为、人数与叙述文本；"
+    "要求：1) 只可复述/整合记录中出现的时间、行为、人数与叙述文本；"
     "2) 记录中没有答案时 answer 必须为「记忆窗口内无相关记录」；"
-    "3) 不要编造任何画面细节。\n"
+    "3) 不要编造任何画面细节；"
+    "4) answer 用一句完整中文（20–60字），包含时间与判定，判定为待确认或已排除时须如实说明。\n"
     '仅输出JSON：{{"answer": "<不超过80字的中文回答>", '
-    '"evidence_times": ["<引用记录的 video_time_sec>"]}}'
+    '"evidence_times": ["<引用记录的时间>"]}}'
 )
+
+
+SCENE_CHAT_DECISION_CN = {"confirmed": "已确认", "rejected": "已排除",
+                          "uncertain": "不确定", "pending": "待确认"}
 
 
 class TrackNarrator:
@@ -47,16 +52,22 @@ class TrackNarrator:
         self.vllm_url = str(cfg.get("vllm_url", "http://localhost:8001/v1/chat/completions"))
         self.api_key = str(cfg.get("vllm_api_key", "EMPTY"))
         self.model_name = str(cfg.get("model_name", "qwen2.5-1.5b-instruct"))
-        self.max_tokens = int(cfg.get("narrate_max_tokens", 80))
-        self.timeout = float(cfg.get("narrate_timeout_s", 6.0))
+        # 板上 0.5B 单次生成 20–90s：旧默认 6s 会让点播报/录像聊天恒走 fallback
+        tn_cfg = cfg.get("track_narrator", {}) if isinstance(cfg, dict) else {}
+        self.max_tokens = int(tn_cfg.get("narrate_max_tokens", 96))
+        self.timeout = float(tn_cfg.get("narrate_timeout_s", 60.0))
+        self.chat_max_tokens = int(tn_cfg.get("chat_max_tokens", 160))
+        self.chat_timeout = float(tn_cfg.get("chat_timeout_s", 120.0))
         self.last_debug: dict[str, Any] = {}
 
     # ------------------------------------------------------------------ #
-    def _chat(self, prompt: str) -> str:
+    def _chat(self, prompt: str, *, max_tokens: int | None = None,
+              timeout: float | None = None) -> str:
         from src.core.vlm_client import vlm_chat  # 延迟导入：脱离引擎独立可测
         return vlm_chat(self.vllm_url, self.api_key, self.model_name,
-                        prompt, frames=None, max_tokens=self.max_tokens,
-                        timeout=self.timeout)
+                        prompt, frames=None,
+                        max_tokens=max_tokens or self.max_tokens,
+                        timeout=self.timeout if timeout is None else timeout)
 
     def narrate_track(self, track_facts: dict[str, Any]) -> dict[str, Any]:
         return self._narrate(NARRATE_PROMPT, track_facts, key="summary")
@@ -69,22 +80,42 @@ class TrackNarrator:
         """时刻③和录像聊天：场景记忆检索记录 → 文本 LLM 合成回答（记录=唯一信息源）。"""
         import json as _json
         t0 = time.perf_counter()
-        context = [{"video_time_sec": h.get("video_time_sec"), "task_id": h.get("task_id"),
-                    "doc_type": h.get("doc_type"), "text": str(h.get("text", ""))[:200]}
+
+        def _hit_time(h: dict[str, Any]) -> str:
+            v = h.get("video_time_sec")
+            if v is not None:
+                try:
+                    return f"视频{float(v):.1f}s"
+                except (TypeError, ValueError):
+                    pass
+            wall = str(h.get("wall_time") or "").strip()
+            if wall:
+                return wall[11:19] if len(wall) >= 19 else wall
+            frame = h.get("frame_id")
+            return f"帧{frame}" if frame is not None else "时间未知"
+
+        context = [{"time": _hit_time(h), "doc_type": h.get("doc_type"),
+                    "decision": SCENE_CHAT_DECISION_CN.get(str(h.get("final_decision", "")), ""),
+                    "summary": str(h.get("summary") or h.get("text", ""))[:120]}
                    for h in (hits or [])]
         fallback = ("记忆窗口内无相关记录" if not context else
-                    "；".join(f"t={h.get('video_time_sec')}s {str(h.get('text', ''))[:40]}"
-                              for h in context[:2]))
+                    "；".join((h["summary"] or h["time"])[:60] for h in context[:2]))
         out: dict[str, Any] = {"ok": False, "answer": fallback, "source": "fallback",
                                "evidence_times": [], "latency_ms": 0}
         try:
             raw = self._chat(SCENE_CHAT_PROMPT.format(
                 context_json=_json.dumps(context, ensure_ascii=False),
-                question=question))
+                question=question),
+                max_tokens=self.chat_max_tokens, timeout=self.chat_timeout)
             from src.core.vlm_client import parse_json_loose
             parsed = parse_json_loose(raw) or {}
             answer = str(parsed.get("answer", "")).strip()
             if answer and answer != "None":
+                # 0.5B 常只回一个短语（如"有人吸烟"）；补上时间/条数/判定，保证可读且不脱离证据
+                if len(answer) < 12 and context:
+                    first = context[0]
+                    decision = first.get("decision") or "未标注"
+                    answer = f"{answer}。记录依据：{first['time']} 等 {len(context)} 条（{decision}）"
                 out.update({"ok": True, "answer": answer[:160], "source": "llm",
                             "evidence_times": [str(t) for t in parsed.get("evidence_times", [])][:5]})
         except Exception as exc:

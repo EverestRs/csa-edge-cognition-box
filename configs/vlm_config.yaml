@@ -1,4 +1,4 @@
-enabled: true
+enabled: false   # 板端 0.5B 为纯文本模型：关闭图片 VLM reviewer，视觉走 crop/pose/几何
 review_mode: async
 trigger_classes: [H01, H02, H03, H04, H05, M01, M02, M03, S01, S02]
 # 运行时灰色地带复核区间 (PoseClassifier 置信度)
@@ -12,10 +12,10 @@ prompt_template: "分析图中人员的行为。请先用一句话描述其动�
 # 推理框架: true=vLLM(离线批标注), false=transformers(运行时复核)
 # B3: 全局 VLM 并发槽位（vLLM continuous batching 上限保护，防 KV cache 挤爆）
 vlm_router:
-  max_concurrent_requests: 4
+  max_concurrent_requests: 1
 
 use_vllm: true
-vllm_url: http://localhost:8001/v1/chat/completions
+vllm_url: http://127.0.0.1:8001/v1/chat/completions
 # 延迟预算（离线标注用较大值）
 max_latency_ms_gpu: 60000
 max_latency_ms_cpu: 120000
@@ -32,8 +32,16 @@ scene_narrator:
   summary_window: 10             # 滚动摘要覆盖的最近叙述条数
   summary_refresh_every: 5       # 每新增多少条叙述重建一次滚动摘要
   max_image_px: 768
-  max_latency_ms: 15000
+  max_latency_ms: 120000         # 0.5B 在 A55 上 prompt eval ~7 tok/s，首条需留足预算
+  max_tokens: 192                # 输出上限；过长会拖过超时窗口
   failure_backoff_seconds: 30    # vLLM 调用失败后的退避时长
+
+# ── 文本语言层：点谁说谁 / 和录像聊天（板上 0.5B 单次 20–90s）──
+track_narrator:
+  narrate_timeout_s: 20          # 点播报（单目标，交互式：超时即用确定性短句兜底）
+  narrate_max_tokens: 80
+  chat_timeout_s: 120            # 录像聊天（需合成多条记录）
+  chat_max_tokens: 160
 
 # ── 告警事件裁决器 (AlertAdjudicator)：告警触发后异步两趟复核 ──
 alert_adjudicator:
@@ -42,9 +50,11 @@ alert_adjudicator:
   after_seconds: 5               # 裁决窗口：告警后 N 秒（收满才发起）
   frames_per_call: 6
   max_image_px: 512
-  max_latency_ms: 30000
+  max_latency_ms: 60000
+  max_tokens: 160
+  use_images: false              # 纯文本 0.5B：裁决只用结构化事实，不发图
   failure_backoff_seconds: 30
-  max_pending_alerts: 4          # 待裁决队列上限（告警爆发期有界排队，超出丢弃并计数）
+  max_pending_alerts: 1          # 纯文本 0.5B 单槽：裁决只保留 1 条，避免饿死叙述器
 
 # ── 环形帧缓冲（叙述器与裁决器共用，降采样存储；窗口淘汰按视频时间执行） ──
 frame_buffer:
@@ -79,13 +89,14 @@ nl_rule_engine:
   rule_cooldown_seconds: 10         # 同一规则两次告警的最小视频时间间隔
   default_min_confidence: 0.6
   max_image_px: 512
-  max_latency_ms: 20000
+  max_latency_ms: 60000
+  use_images: false                 # 纯文本 0.5B：开放规则不做视觉检查，闭集规则仍按行为标签
   failure_backoff_seconds: 30
   max_open_checks_per_cycle: 3      # 单轮开放词汇判定调用预算（ROADMAP Stage 2 前置：防规则数×独立调用打爆 vLLM）
 
 # ── 新行为备忘 (ROADMAP Stage 1)：事件级触发，描述体系外行为并落盘证据 ──
 novel_behavior:
-  enabled: true
+  enabled: false                    # 图片 VLM 功能，纯文本 0.5B 不可用；关闭避免 500
   window_seconds: 5                 # 取告警前后 ±N 秒环形缓冲帧
   scene_frames: 4                   # 场景帧数
   crop_frames: 3                    # person crop 帧数（原帧缓冲）

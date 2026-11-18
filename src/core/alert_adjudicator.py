@@ -65,7 +65,9 @@ class AlertAdjudicator:
         self.before_seconds = float(cfg.get("before_seconds", 5))
         self.after_seconds = float(cfg.get("after_seconds", 5))
         self.frames_per_call = int(max(2, cfg.get("frames_per_call", 6)))
-        self.max_latency_ms = int(cfg.get("max_latency_ms", 30000))
+        self.max_latency_ms = int(cfg.get("max_latency_ms", 60000))
+        self.max_tokens = int(max(64, cfg.get("max_tokens", 160)))
+        self.use_images = bool(cfg.get("use_images", True))
         self.max_image_px = int(cfg.get("max_image_px", 512))
         self.backoff_seconds = float(cfg.get("failure_backoff_seconds", 30))
         # 待裁决队列上限：告警爆发期旧实现单槽直接丢弃（WEAKNESS_AUDIT #1），改为有界排队
@@ -195,6 +197,9 @@ class AlertAdjudicator:
                     f"{facts_text}\n[结构化事实] "
                     + json.dumps(alert.get("facts", {}), ensure_ascii=False)[:600]
                 )
+            elif not self.use_images:
+                description = "[结构化事实] " + json.dumps(
+                    alert.get("facts", {}), ensure_ascii=False)[:600]
             else:
                 description = vlm_chat(
                     base_url=self.vllm_url,
@@ -202,7 +207,7 @@ class AlertAdjudicator:
                     model=self.model_name,
                     prompt=DESCRIBE_PROMPT.format(context=context or "（暂无场景上下文）"),
                     frames=call_frames,
-                    max_tokens=300,
+                    max_tokens=self.max_tokens,
                     timeout=self.max_latency_ms / 1000.0,
                     max_image_px=self.max_image_px,
                 )
@@ -224,7 +229,7 @@ class AlertAdjudicator:
                     context=context or "（暂无场景上下文）",
                 ),
                 frames=None,
-                max_tokens=200,
+                max_tokens=max(96, self.max_tokens // 2),
                 timeout=self.max_latency_ms / 1000.0,
             )
             parsed = parse_json_loose(judge_text) or {}

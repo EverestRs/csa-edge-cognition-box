@@ -157,6 +157,14 @@ BEHAVIOR_CN = {
     "PHONE": "打电话", "UNKNOWN": "未知",
 }
 
+# 场景问答证据展示用中文映射（后端已给出 time_label/label，这里做兜底与措辞）
+DOC_TYPE_CN = {"scene_narration": "场景叙述", "alert_event": "告警事件", "behavior_prototype": "行为原型"}
+CHAT_SOURCE_CN = {"llm": "本地模型生成", "fallback": "检索记录摘要（模型未返回）",
+                  "demo_cache": "演示缓存", "none": "无"}
+SEARCH_MODE_CN = {"bm25": "关键词检索", "hybrid": "关键词+向量检索",
+                  "vector": "向量检索", "demo_cache": "演示缓存"}
+DECISION_CN = {"confirmed": "已确认", "rejected": "已排除", "uncertain": "不确定", "pending": "待确认"}
+
 
 def render_overlay_component(
     media_url: str,
@@ -1294,22 +1302,31 @@ with right:
     chat_q = st.text_input("向系统提问（仅基于场景记忆回答）",
                            placeholder="例如: 刚才门口发生了什么？有人吸烟吗？", key="chat_q")
     if st.button("💬 提问", use_container_width=True) and chat_q.strip():
-        with st.spinner("检索场景记忆并合成回答…"):
+        with st.spinner("检索场景记忆并用本地 0.5B 合成回答（约 30–90 秒）…"):
             try:
                 chat_resp = requests.post(
                     f"{api_base}/api/v1/chat",
                     json={"question": chat_q.strip()},
-                    timeout=30,
+                    timeout=180,
                 )
                 if chat_resp.ok:
                     chat_data = chat_resp.json()
                     st.success(f"💬 {chat_data.get('answer', '')}")
                     for ev in (chat_data.get("evidence") or [])[:3]:
-                        ts = ev.get("video_time_sec")
-                        st.caption(f"📎 证据 t={ts}s [{ev.get('doc_type', '')}] "
-                                   f"{str(ev.get('text', ''))[:70]}")
-                    st.caption(f"检索模式: {chat_data.get('search_mode', '-')} · "
-                               f"回答来源: {chat_data.get('source', '-')}")
+                        ts = ev.get("time_label") or "时间未知"
+                        label = ev.get("label") or DOC_TYPE_CN.get(ev.get("doc_type"), "记录")
+                        decision = DECISION_CN.get(ev.get("final_decision"), "")
+                        summary = str(ev.get("summary") or ev.get("text", "")).strip()
+                        suffix = f" · {decision}" if decision else ""
+                        if ev.get("doc_type") == "alert_event":
+                            st.caption(f"📎 {ts} · {label}{suffix}")
+                        else:
+                            st.caption(f"📎 {ts} · {label}{suffix}｜{summary[:80]}")
+                    source = chat_data.get("source", "-")
+                    st.caption(f"检索方式: {SEARCH_MODE_CN.get(chat_data.get('search_mode'), chat_data.get('search_mode', '-'))}"
+                               f" · 回答来源: {CHAT_SOURCE_CN.get(source, source)}")
+                    if source == "fallback":
+                        st.caption("提示：本地 0.5B 未在时限内返回，以上为检索记录摘要。")
                 else:
                     st.warning(f"问答接口失败: {chat_resp.status_code} {chat_resp.text[:120]}")
             except Exception as exc:
@@ -1381,6 +1398,8 @@ with right:
             )
             if narrator.get("last_error"):
                 st.caption(f"叙述器最近错误: {narrator.get('last_error')}")
+            elif narrator.get("healthy") and not narrator.get("narration_count"):
+                st.caption("板上为 0.5B 文本模型：首条叙述约 35–70 秒（异步单飞，不阻塞检测/告警）。")
 
         scene_log = st.session_state.get("scene_log", [])
         if scene_log:
@@ -1405,7 +1424,7 @@ with right:
                         f"{str(record.get('scene_summary', ''))[:120]}"
                     )
         else:
-            st.info("暂无场景叙述，点击“刷新场景理解”或运行分析任务（每 20 秒视频时间生成一条）。")
+            st.info("暂无场景叙述：运行分析任务后每条按 20 秒视频时间触发；0.5B 单条约 35–70 秒，请稍后刷新。")
 
 
     with tab_situation:
@@ -1430,16 +1449,22 @@ with right:
 
         search_result = st.session_state.get("search_result")
         if isinstance(search_result, dict):
+            mode = search_result.get('mode', '-')
             st.caption(
-                f"检索模式: {search_result.get('mode', '-')} | 索引文档数: {search_result.get('total_docs', 0)}"
+                f"检索方式: {SEARCH_MODE_CN.get(mode, mode)} | 索引文档数: {search_result.get('total_docs', 0)}"
             )
             hits = search_result.get("hits", [])
             if hits:
                 for hit in hits:
                     type_icon = "🧭" if hit.get("doc_type") == "scene_narration" else "🚨"
-                    time_label = hit.get("wall_time") or hit.get("video_time_sec") or "-"
-                    st.markdown(f"{type_icon} **[{hit.get('doc_type', '')}]** `{time_label}` (score={hit.get('score', 0)})")
-                    st.caption(str(hit.get("highlight", ""))[:200])
+                    raw_time = hit.get("video_time_sec") if hit.get("video_time_sec") is not None else hit.get("wall_time")
+                    if isinstance(raw_time, (int, float)):
+                        time_label = f"视频 {float(raw_time):.1f}s"
+                    else:
+                        time_label = str(raw_time or "-")
+                    doc_cn = DOC_TYPE_CN.get(hit.get("doc_type"), hit.get("doc_type", ""))
+                    st.markdown(f"{type_icon} **{doc_cn}** `{time_label}` (score={hit.get('score', 0)})")
+                    st.caption(str(hit.get("alert_label") or hit.get("highlight", ""))[:200])
             else:
                 st.info("没有命中结果。")
 

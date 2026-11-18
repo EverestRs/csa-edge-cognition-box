@@ -96,6 +96,21 @@ class InferenceEngine:
         self.action_min_track_score = float(max(0.0, inference_cfg.get("action_min_track_score", 0.0)))
         self.action_warmup_frames = int(max(0, inference_cfg.get("action_warmup_frames", 0)))
         self.action_min_track_age = int(max(1, inference_cfg.get("action_min_track_age", 1)))
+        # 方案 A：快速几何触发（不依赖 32 帧 PC 缓冲），立即发 pending 告警
+        self._fast_trigger_enabled = bool(inference_cfg.get("fast_trigger_enabled", True))
+        self._fast_trigger_aspect = float(inference_cfg.get("fast_trigger_aspect", 0.95))
+        self._fast_trigger_max_height_ratio = float(inference_cfg.get("fast_trigger_max_height_ratio", 0.40))
+        self._fast_trigger_torso_horizontal = float(inference_cfg.get("fast_trigger_torso_horizontal", 0.60))
+        self._fast_trigger_drop_ratio = float(inference_cfg.get("fast_trigger_drop_ratio", 0.08))
+        self._fast_trigger_cooldown_seconds = float(inference_cfg.get("fast_trigger_cooldown_seconds", 5.0))
+        self._fast_trigger_last: dict[str, int] = {}
+        self._fast_trigger_hits: dict[str, int] = {}
+        self._fast_trigger_prev_bbox: dict[str, tuple[int, list[float]]] = {}
+        self._fast_confirm_geometry_seconds = float(inference_cfg.get("fast_confirm_geometry_seconds", 1.5))
+        self._fast_reject_geometry_seconds = float(inference_cfg.get("fast_reject_geometry_seconds", 1.0))
+        self._pending_alerts: dict[str, dict] = {}
+        self._pending_alert_updates: deque = deque()
+        self._action_pc_last_result: dict = {}
         self.action_default_label = str(inference_cfg.get("action_default_label", "Normal"))
         self.action_default_confidence = float(min(1.0, max(0.0, inference_cfg.get("action_default_confidence", 0.60))))
         self.pose_motion_gate_iou_threshold = float(inference_cfg.get("pose_motion_gate_iou_threshold", 1.01))
@@ -147,6 +162,21 @@ class InferenceEngine:
         self._pipe_queue_size = max(2, int(_pipeline_cfg.get("queue_size", 4)))
         self._pipe_generation = 0
         self._pipe_dropped = 0
+        self._pipe_stage_ms = {1: 0.0, 2: 0.0, 3: 0.0}
+        self._pipe_stage_max = {1: 0.0, 2: 0.0, 3: 0.0}
+        self._pipe_stage_count = {1: 0, 2: 0, 3: 0}
+        self._pipe_stage_samples = {1: deque(maxlen=240), 2: deque(maxlen=240), 3: deque(maxlen=240)}
+        self._assemble_samples: deque = deque(maxlen=240)
+        self._stage_action_samples: deque = deque(maxlen=240)
+        self._stage_post_samples: deque = deque(maxlen=240)
+        self._pose_batch_runs = 0
+        # 异步 PoseClassifier worker：单线程，避免 ORT session 并发；只算 PC 批次，
+        # 三阶段决策/crop 复核仍留在 stage3 线程。
+        self._action_pc_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="action-pc")
+        self._action_pc_lock = threading.Lock()
+        self._action_pc_result: dict = {}
+        self._action_pc_inflight = False
+        self._action_pc_async_samples: deque = deque(maxlen=60)
         self._pipe_results: deque = deque()
         self._pipe_results_lock = threading.Lock()
         self._last_pipeline_error = ""
@@ -290,8 +320,40 @@ class InferenceEngine:
         self._veto_history.clear()
         self._vlm_confirmed_spatial.clear()
         self._vlm_veto_spatial.clear()
+        # 任务级缓存隔离：ByteTrack track_id 会从 1 重新分配，不清理会把上一任务的
+        # action/pose/label 缓存套到新目标上，导致 action_runs 恒 0、行为标签沿用旧任务。
+        self.action_cache.clear()
+        self.pose_cache.clear()
+        self.pose_last_bbox.clear()
+        self.pose_last_frame.clear()
+        self.track_label_history.clear()
+        self.track_smooth_history.clear()
+        self.track_seen_frames.clear()
+        self._track_prev_bbox.clear()
+        self.track_vlm_review_cache.clear()
+        self.action_recognizer.clear_stale_tracks(set())
+        self.behavior_reasoner.clear_stale_tracks(set())
         # B6: 管道状态隔离——代际 +1 使各阶段丢弃旧任务残留帧，并清空队列/结果
         self._pipe_generation += 1
+        # 每次任务重置 pipeline 计时/丢弃计数，避免跨任务累计污染诊断
+        self._pipe_dropped = 0
+        self._pipe_stage_ms = {1: 0.0, 2: 0.0, 3: 0.0}
+        self._pipe_stage_max = {1: 0.0, 2: 0.0, 3: 0.0}
+        self._pipe_stage_count = {1: 0, 2: 0, 3: 0}
+        self._pipe_stage_samples = {1: deque(maxlen=240), 2: deque(maxlen=240), 3: deque(maxlen=240)}
+        self._assemble_samples = deque(maxlen=240)
+        self._stage_action_samples = deque(maxlen=240)
+        self._stage_post_samples = deque(maxlen=240)
+        self._action_pc_result = {}
+        self._action_pc_async_samples = deque(maxlen=60)
+        self._fast_trigger_last.clear()
+        self._fast_trigger_hits.clear()
+        self._fast_trigger_prev_bbox.clear()
+        self._pending_alerts.clear()
+        self._pending_alert_updates.clear()
+        self._action_pc_last_result = {}
+        self._pose_batch_runs = 0
+        self._last_pipeline_error = ""
         for _q_name in ("_pipe_q1", "_pipe_q2", "_pipe_q3"):
             _q = getattr(self, _q_name, None)
             if _q is not None:
@@ -319,6 +381,10 @@ class InferenceEngine:
         self.nl_rule_engine.stop()
         self.novel_behavior_memo.stop()
         self._vlm_async_executor.shutdown(wait=False, cancel_futures=True)
+        try:
+            self._action_pc_pool.shutdown(wait=False, cancel_futures=True)
+        except Exception:
+            pass
         # 释放 NPU 设备（OM 后端 unload→finalize），否则档切换重建时新 OM 加载失败回退 CPU ONNX
         self.detector.close()
 
@@ -777,15 +843,21 @@ class InferenceEngine:
             tracks = []
             for d in detections or []:
                 try:
-                    tracks.append({"track_id": d.get("track_id"),
-                                   "label": d.get("label") if isinstance(d, dict) else getattr(d.behavior, "type", "Normal"),
-                                   "confidence": (d.get("confidence") if isinstance(d, dict)
-                                                  else getattr(d.behavior, "confidence", 0.0))})
+                    if isinstance(d, dict):
+                        tracks.append({"track_id": d.get("track_id"),
+                                       "label": d.get("label", "Normal"),
+                                       "confidence": float(d.get("confidence", 0.0) or 0.0)})
+                    else:
+                        behavior = getattr(d, "behavior", None)
+                        tracks.append({"track_id": getattr(d, "track_id", None),
+                                       "label": getattr(behavior, "type", "Normal"),
+                                       "confidence": float(getattr(behavior, "confidence", 0.0) or 0.0)})
                 except Exception:
                     continue
             facts = build_event_facts(
-                alert={"type": alert.get("type", ""), "confidence": alert.get("confidence"),
-                       "frame_id": frame_id, "rule_text": alert.get("rule_text", "")},
+                alert={"type": alert.get("type", ""), "label": alert.get("label", ""),
+                       "confidence": alert.get("confidence"), "frame_id": frame_id,
+                       "rule_text": alert.get("rule_text", "")},
                 scene_facts=build_scene_facts(frame_id=frame_id, tracks=tracks),
                 traces=[t if isinstance(t, dict) else t.to_dict()
                         for t in (self._frame_traces or {}).values()])
@@ -1008,6 +1080,7 @@ class InferenceEngine:
                 pose_batch_tracks.append(track)
 
         if pose_batch_tracks:
+            self._pose_batch_runs += 1
             pose_t0 = time.perf_counter()
             pose_batch_results = self.pose_estimator.infer_batch(frame, pose_batch_tracks)
             stage_pose_ms += (time.perf_counter() - pose_t0) * 1000.0
@@ -1040,6 +1113,228 @@ class InferenceEngine:
         ctx["action_skip_gate"] = action_skip_gate
         ctx["action_skip_cached"] = action_skip_cached
         ctx["action_skip_default"] = action_skip_default
+
+    def _drain_action_pc(self, frame_id: int, tracks: list[dict]) -> list[tuple[str, float]]:
+        """取异步 PC 结果；过期/代际不符则退回 action_cache/default。"""
+        items = None
+        with self._action_pc_lock:
+            result = self._action_pc_result
+            self._action_pc_result = {}
+        if result and result.get("generation") == self._pipe_generation:
+            max_age = max(2 * int(self.action_stride), 24)
+            if int(frame_id) - int(result.get("frame_id", frame_id)) <= max_age:
+                items = result.get("items") or {}
+        default = (self.action_default_label, self.action_default_confidence)
+        out: list[tuple[str, float]] = []
+        for track in tracks:
+            tid = str(track["track_id"])
+            if items and tid in items:
+                out.append(items[tid])
+            else:
+                out.append(self.action_cache.get(tid, default))
+        return out
+
+    def _submit_action_pc(self, tracks: list[dict], frame_id: int) -> None:
+        """把 PC 批次提交给单线程 worker；姿态 clip 先复制，避免读主线程 deque。"""
+        with self._action_pc_lock:
+            if self._action_pc_inflight:
+                return
+            self._action_pc_inflight = True
+        ids: list[str] = []
+        tensors: list[np.ndarray] = []
+        for track in tracks:
+            tid = str(track["track_id"])
+            tensor = self.action_recognizer.build_pose_tensor(tid)
+            if tensor is not None:
+                ids.append(tid)
+                tensors.append(tensor)
+        if not tensors:
+            with self._action_pc_lock:
+                self._action_pc_inflight = False
+            return
+        generation = self._pipe_generation
+
+        def _job() -> None:
+            started = time.perf_counter()
+            results = self.action_recognizer.infer_pose_classifier_tensors(tensors)
+            elapsed = (time.perf_counter() - started) * 1000.0
+            with self._action_pc_lock:
+                if generation == self._pipe_generation:
+                    self._action_pc_result = {
+                        "generation": generation,
+                        "frame_id": int(frame_id),
+                        "items": dict(zip(ids, results)),
+                    }
+                    self._action_pc_last_result = dict(self._action_pc_result)
+                self._action_pc_async_samples.append(elapsed)
+                self._action_pc_inflight = False
+
+        self._action_pc_pool.submit(_job)
+
+    def _fast_geometry_candidate(self, state: dict, frame: np.ndarray) -> str | None:
+        track = state.get("track") or {}
+        bbox = [float(v) for v in track.get("bbox", [0, 0, 0, 0])]
+        w, h = bbox[2], bbox[3]
+        if w <= 0 or h <= 0:
+            return None
+        aspect = w / h
+        height_ratio = h / max(1.0, float(frame.shape[0]))
+        keypoints = state.get("keypoints") or []
+        torso = (self.behavior_reasoner._pose_torso_vertical_ratio(keypoints)
+                 if keypoints else None)
+        if aspect >= self._fast_trigger_aspect and height_ratio <= self._fast_trigger_max_height_ratio:
+            return "shape"
+        if torso is not None and torso <= self._fast_trigger_torso_horizontal:
+            return "torso"
+        return None
+
+    def _update_pending_confirmations(self, track_states: list[dict], frame_id: int,
+                                      frame: np.ndarray | None) -> None:
+        """板端闭环：PC 结果优先，几何持续性兜底；状态变化写入更新队列。"""
+        if not self._pending_alerts or frame is None:
+            return
+        fps = max(1.0, float(getattr(self, "_source_fps", 8.0)))
+        ttl_frames = int(15.0 * fps)
+        confirm_frames = max(2, int(self._fast_confirm_geometry_seconds * fps))
+        reject_frames = max(2, int(self._fast_reject_geometry_seconds * fps))
+        states = {str(s.get("track_id")): s for s in track_states}
+        with self._action_pc_lock:
+            pc_result = dict(self._action_pc_last_result or {})
+        for tid, pending in list(self._pending_alerts.items()):
+            trigger_frame = int(pending.get("trigger_frame", frame_id))
+            if frame_id - trigger_frame > ttl_frames:
+                self._pending_alerts.pop(tid, None)
+                continue
+            alert = pending.get("alert") or {}
+            decision = None
+            source = ""
+            label = "H04"
+            conf = float(alert.get("confidence", 0.6))
+            items = None
+            if (pc_result.get("generation") == self._pipe_generation
+                    and int(pc_result.get("frame_id", -1)) >= trigger_frame):
+                items = pc_result.get("items") or {}
+            if items and tid in items:
+                pc_label, pc_conf = items[tid]
+                if pc_label == "H04" and float(pc_conf) >= 0.4:
+                    decision, source, label, conf = "confirmed", "pose_classifier", pc_label, float(pc_conf)
+                elif pc_label == "Normal" and float(pc_conf) >= 0.7:
+                    decision, source, label, conf = "rejected", "pose_classifier", pc_label, float(pc_conf)
+            if decision is None:
+                state = states.get(tid)
+                if state is not None and self._fast_geometry_candidate(state, frame):
+                    pending["missing"] = 0
+                    if frame_id - trigger_frame >= confirm_frames:
+                        decision, source, label, conf = "confirmed", "geometry_persist", "H04", max(conf, 0.6)
+                else:
+                    pending["missing"] = int(pending.get("missing", 0)) + 1
+                    if pending["missing"] >= reject_frames:
+                        decision = "rejected"
+                        source = "geometry_lost" if state is not None else "track_lost"
+                        conf = 0.0
+            if decision is None:
+                continue
+            self._pending_alerts.pop(tid, None)
+            update = dict(alert)
+            update.update({
+                "triggered": True,
+                "final_decision": decision,
+                "source": source,
+                "label": label,
+                "confidence": round(float(conf), 2),
+                "decided_frame": int(frame_id),
+                "reason": source,
+            })
+            self._pending_alert_updates.append(update)
+
+    def _fast_fall_trigger(self, track_states: list[dict], frame_id: int,
+                           frame: np.ndarray | None) -> dict | None:
+        """方案 A：框形/躯干/下沉三选一，连续 2 帧即发 pending 告警。
+
+        不依赖 PoseClassifier 的 32 帧缓冲；只用当前 bbox + 缓存 keypoints，
+        8fps 下约 0.25s 报警。
+        """
+        if not self._fast_trigger_enabled or frame is None:
+            return None
+        frame_h = float(frame.shape[0])
+        fps = max(1.0, float(getattr(self, "_source_fps", 8.0)))
+        cooldown = max(1, int(self._fast_trigger_cooldown_seconds * fps))
+        for state in track_states:
+            track = state.get("track") or {}
+            bbox = [float(v) for v in track.get("bbox", [0, 0, 0, 0])]
+            w, h = bbox[2], bbox[3]
+            if w <= 0 or h <= 0:
+                continue
+            tid = str(state.get("track_id"))
+            aspect = w / h
+            height_ratio = h / max(1.0, frame_h)
+            cy = bbox[1] + h / 2.0
+            keypoints = state.get("keypoints") or []
+            torso = (self.behavior_reasoner._pose_torso_vertical_ratio(keypoints)
+                     if keypoints else None)
+            prev = self._fast_trigger_prev_bbox.get(tid)
+            drop = 0.0
+            if prev is not None and (frame_id - prev[0]) <= max(2, int(0.5 * fps)):
+                prev_cy = prev[1][1] + prev[1][3] / 2.0
+                drop = (cy - prev_cy) / max(1.0, frame_h)
+            self._fast_trigger_prev_bbox[tid] = (int(frame_id), list(bbox))
+
+            shape_candidate = aspect >= self._fast_trigger_aspect and height_ratio <= self._fast_trigger_max_height_ratio
+            torso_candidate = torso is not None and torso <= self._fast_trigger_torso_horizontal
+            drop_candidate = drop >= self._fast_trigger_drop_ratio
+            if not (shape_candidate or torso_candidate or drop_candidate):
+                self._fast_trigger_hits[tid] = 0
+                continue
+            hits = int(self._fast_trigger_hits.get(tid, 0)) + 1
+            self._fast_trigger_hits[tid] = hits
+            if hits < 2:
+                continue
+            last = int(self._fast_trigger_last.get(tid, -10**9))
+            if frame_id - last < cooldown:
+                continue
+            self._fast_trigger_last[tid] = int(frame_id)
+            self._fast_trigger_hits[tid] = 0
+            snapshot_url = ""
+            try:
+                snap_dir = getattr(self.alert_system, "snapshots_dir", None)
+                if snap_dir is not None:
+                    snap_dir.mkdir(parents=True, exist_ok=True)
+                    snap_path = (snap_dir / f"fast_alert_{int(frame_id)}.jpg").resolve()
+                    if cv2.imwrite(str(snap_path), frame):
+                        snapshot_url = f"/api/v1/media?path={snap_path}"
+            except Exception:
+                snapshot_url = ""
+            reason = "shape" if shape_candidate else ("torso" if torso_candidate else "drop")
+            print(f"[fast_trigger] frame={frame_id} tid={tid} reason={reason} "
+                  f"aspect={aspect:.2f} h_ratio={height_ratio:.2f} torso={torso} drop={drop:.3f}", flush=True)
+            alert = {
+                "triggered": True,
+                "type": "h04_detected",
+                "source": "fast_trigger",
+                "final_decision": "pending",
+                "consecutive_frames": hits,
+                "snapshot_url": snapshot_url,
+                "clip_path": "",
+                "track_id": tid,
+                "bbox": [round(v, 1) for v in bbox],
+                "label": "H04",
+                "confidence": 0.6,
+                "reason": reason,
+                "frame_id": int(frame_id),
+                "timestamp": time.time(),
+            }
+            self._pending_alerts[tid] = {
+                "alert": dict(alert),
+                "trigger_frame": int(frame_id),
+                "created": time.time(),
+                "missing": 0,
+            }
+            try:
+                self._submit_action_pc([track], frame_id)
+            except Exception:
+                pass
+            return alert
+        return None
 
     def _stage3_recognize(self, ctx: dict) -> None:
         """阶段3：三级决策 + 规则精化 + C2平滑 + 告警/场景旁路 + 姿态缓冲。"""
@@ -1115,13 +1410,11 @@ class InferenceEngine:
             action_t0 = time.perf_counter()
             # ── 三级决策：PoseClassifier 主路径 ──────────────────
             if self.action_recognizer.pose_classifier_loaded:
-                # Step 1: PoseClassifier 批次推理
+                # Step 1: 取上一次异步 PC 结果；当帧只提交新任务，不等待 300ms
                 try:
-                    pc_results = self.action_recognizer.infer_pose_classifier_batch(
-                        [str(s["track_id"]) for s in action_batch_tracks]
-                    )
+                    pc_results = self._drain_action_pc(frame_id, action_batch_tracks)
+                    self._submit_action_pc(action_batch_tracks, frame_id)
                 except Exception:
-                    # 姿态缓冲形状异常（如 17/133 混入）时兜底，不崩溃
                     pc_results = [("Normal", 0.0) for _ in action_batch_tracks]
                 # Step 2: 三级决策
                 three_level_results: list[tuple[str, float]] = []
@@ -1463,13 +1756,26 @@ class InferenceEngine:
         self.action_recognizer.clear_stale_tracks(current_track_ids)
         self.behavior_reasoner.clear_stale_tracks(current_track_ids)
 
+        self._update_pending_confirmations(track_states, frame_id, frame)
         alert = self.alert_system.build_alert(main_label, main_confidence, frame_id, timestamp=time.time(),
                                               frame=frame)
+        fast_triggered = False
+        update_triggered = False
+        if not alert["triggered"]:
+            fast_alert = self._fast_fall_trigger(track_states, frame_id, frame)
+            if fast_alert is not None:
+                alert = fast_alert
+                fast_triggered = True
+        if not alert["triggered"] and self._pending_alert_updates:
+            alert = self._pending_alert_updates.popleft()
+            update_triggered = True
         if alert["triggered"]:
             self._attach_event_facts(alert, frame_id, detections)
             self._mqtt_publish_alert(alert, frame_id)
-            if not self.alert_adjudicator.submit(alert, frame_id):
-                self._adjudicate_submit_dropped += 1
+            # fast_trigger/确认更新是板端闭环，不送 VLM/裁决；base 告警仍走原裁决链。
+            if not fast_triggered and not update_triggered:
+                if not self.alert_adjudicator.submit(alert, frame_id):
+                    self._adjudicate_submit_dropped += 1
 
         # PoseClassifier 未加载时，使用旧 VLM 复核路径作为后备
         if not self.action_recognizer.pose_classifier_loaded:
@@ -1709,6 +2015,7 @@ class InferenceEngine:
                 return
             if ctx.get("generation") != self._pipe_generation:
                 continue  # 上一任务残留帧，丢弃
+            t0 = time.perf_counter()
             try:
                 if stage_no == 1:
                     self._stage1_detect(ctx)
@@ -1716,7 +2023,11 @@ class InferenceEngine:
                     self._stage2_pose(ctx)
                 else:
                     self._stage3_recognize(ctx)
+                    self._stage_action_samples.append(float(ctx.get("stage_action_ms", 0.0)))
+                    self._stage_post_samples.append(float(ctx.get("stage_post_ms", 0.0)))
+                    t_assemble = time.perf_counter()
                     result = self._assemble_result(ctx)
+                    self._assemble_samples.append((time.perf_counter() - t_assemble) * 1000.0)
                     with self._pipe_results_lock:
                         if ctx.get("generation") == self._pipe_generation:
                             self._pipe_results.append(result)
@@ -1725,6 +2036,12 @@ class InferenceEngine:
                 # 该帧丢弃（与历史"忙时丢帧"语义一致），不阻塞后续帧
                 self._last_pipeline_error = f"stage{stage_no}: {type(exc).__name__}: {exc}"
                 continue
+            finally:
+                dt_ms = (time.perf_counter() - t0) * 1000.0
+                self._pipe_stage_ms[stage_no] += dt_ms
+                self._pipe_stage_max[stage_no] = max(self._pipe_stage_max[stage_no], dt_ms)
+                self._pipe_stage_count[stage_no] += 1
+                self._pipe_stage_samples[stage_no].append(dt_ms)
             if q_out is not None:
                 q_out.put(ctx)
 
@@ -1752,6 +2069,17 @@ class InferenceEngine:
         def _qsize(name):
             q = getattr(self, name, None)
             return q.qsize() if q is not None else 0
+
+        def _pct(vals, q):
+            s = sorted(vals)
+            if not s:
+                return 0.0
+            return round(s[min(len(s) - 1, int(q * (len(s) - 1)))], 3)
+
+        stage_samples = getattr(self, "_pipe_stage_samples", {1: (), 2: (), 3: ()})
+        assemble_samples = getattr(self, "_assemble_samples", ())
+        action_samples = getattr(self, "_stage_action_samples", ())
+        post_samples = getattr(self, "_stage_post_samples", ())
         return {
             "enabled": self._pipeline_enabled,
             "dropped": self._pipe_dropped,
@@ -1760,5 +2088,44 @@ class InferenceEngine:
             "q2": _qsize("_pipe_q2"),
             "q3": _qsize("_pipe_q3"),
             "last_error": self._last_pipeline_error,
+            "stage_ms": {
+                str(k): {
+                    "avg_ms": round(self._pipe_stage_ms[k] / max(1, self._pipe_stage_count[k]), 3),
+                    "p50_ms": _pct(stage_samples.get(k, ()), 0.50),
+                    "p95_ms": _pct(stage_samples.get(k, ()), 0.95),
+                    "max_ms": round(self._pipe_stage_max[k], 3),
+                    "count": self._pipe_stage_count[k],
+                }
+                for k in (1, 2, 3)
+            },
+            "assemble_ms": {
+                "p50_ms": _pct(assemble_samples, 0.50),
+                "p95_ms": _pct(assemble_samples, 0.95),
+                "max_ms": round(max(assemble_samples), 3) if assemble_samples else 0.0,
+                "count": len(assemble_samples),
+            },
+            "action_ms": {
+                "p50_ms": _pct(action_samples, 0.50),
+                "p95_ms": _pct(action_samples, 0.95),
+                "count": len(action_samples),
+            },
+            "action_pc": {
+                "inflight": bool(self._action_pc_inflight),
+                "runs": len(self._action_pc_async_samples),
+                "async_ms_p50": _pct(self._action_pc_async_samples, 0.50),
+                "async_ms_p95": _pct(self._action_pc_async_samples, 0.95),
+            },
+            "post_ms": {
+                "p50_ms": _pct(post_samples, 0.50),
+                "p95_ms": _pct(post_samples, 0.95),
+                "count": len(post_samples),
+            },
+            "pose": {
+                "stride": self.pose_stride,
+                "max_tracks": self.max_pose_tracks,
+                "batch_runs": self._pose_batch_runs,
+                "cache_size": len(self.pose_cache),
+                "track_seen_size": len(self.track_seen_frames),
+            },
         }
 

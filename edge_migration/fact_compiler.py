@@ -137,6 +137,7 @@ def build_event_facts(*, alert: dict[str, Any], scene_facts: dict[str, Any],
         "kind": "event",
         "event_type": alert.get("type", "unknown"),
         "trigger_label": alert.get("label") or alert.get("type"),
+        "rule_text": alert.get("rule_text", ""),
         "confidence": alert.get("confidence"),
         "frame_id": alert.get("frame_id"),
         "snapshot_url": alert.get("snapshot_url", ""),
@@ -184,9 +185,15 @@ def facts_to_text(facts: dict[str, Any]) -> dict[str, str]:
             + "。"
         )
     elif kind == "event":
+        event_type = str(facts.get("event_type", ""))
+        event_cn = {"nl_rule_hit": "规则告警", "h04_detected": "跌倒/极端危险告警"}.get(
+            event_type, event_type.replace("_detected", "") or "告警")
+        rule_text = str(facts.get("rule_text", "") or "")
+        trigger = str(facts.get("trigger_label", ""))
+        subject = f"{event_cn}「{rule_text}」" if rule_text else event_cn
         out["description"] = (
-            f"事件{facts.get('event_type', '')}于帧{facts.get('frame_id', 0)}触发，"
-            f"触发行为{CLASS_CN.get(str(facts.get('trigger_label')), str(facts.get('trigger_label', '')))}，"
+            f"{subject}于帧{facts.get('frame_id', 0)}触发，"
+            f"触发行为{CLASS_CN.get(trigger, trigger) or '未知'}，"
             f"当时画面{facts.get('scene', {}).get('person_count', 0)}人。"
         )
     return out

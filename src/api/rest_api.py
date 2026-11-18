@@ -587,9 +587,7 @@ async def run_task(task_id: str, stream_url: str, duration: int):
                 TASKS[task_id]["reconnecting"] = False
                 read_counter += 1
                 orig_frame = frame  # 问题1：原帧复核通道——降采样前的原始帧
-                if source_resize and target_width > 0 and target_height > 0:
-                    frame = cv2.resize(frame, (target_width, target_height), interpolation=cv2.INTER_LINEAR)
-
+                # 降采样推迟到 infer_loop：只对真正要推理/推送的帧做，避免 30fps 读流空转 resize
                 while not stop_event.is_set():
                     in_startup_protection = (time.perf_counter() - task_start_ts) < startup_no_drop_seconds
                     if in_startup_protection and decode_queue.full():
@@ -597,7 +595,7 @@ async def run_task(task_id: str, stream_url: str, duration: int):
                         continue
 
                     with stats_lock:
-                        enqueue_latest(decode_queue, (orig_frame, frame, frame_id), "frames")
+                        enqueue_latest(decode_queue, (orig_frame, orig_frame, frame_id), "frames")
                         stage_a_ms = (time.perf_counter() - stage_a_t0) * 1000.0
                         stage_a_ms_total += stage_a_ms
                         stage_a_ms_max = max(stage_a_ms_max, stage_a_ms)
@@ -675,6 +673,9 @@ async def run_task(task_id: str, stream_url: str, duration: int):
                     orig_frame, frame, frame_id = decode_queue.get(timeout=0.05)
                 except queue.Empty:
                     continue
+
+                if source_resize and target_width > 0 and target_height > 0:
+                    frame = cv2.resize(orig_frame, (target_width, target_height), interpolation=cv2.INTER_LINEAR)
 
                 if min_interval > 0:
                     now = time.perf_counter()
@@ -879,6 +880,7 @@ async def run_task(task_id: str, stream_url: str, duration: int):
                         "sleep_ms_total": round(stage_d_sleep_ms_total, 3),
                     },
                 },
+                "pipeline": engine.pipeline_stats(),
             }
 
             payload_metrics = payload.setdefault("metrics", {})
@@ -1246,6 +1248,24 @@ def api_narrate(request: NarrateRequest):
     return out
 
 
+_DOC_TYPE_CN = {"scene_narration": "场景叙述", "alert_event": "告警事件", "behavior_prototype": "行为原型"}
+
+
+def _hit_time_label(hit: dict) -> str:
+    """证据时间展示：优先视频时间，其次墙钟时间，最后帧号（告警事件常无 video_time_sec）。"""
+    v = hit.get("video_time_sec")
+    if v is not None:
+        try:
+            return f"视频 {float(v):.1f}s"
+        except (TypeError, ValueError):
+            pass
+    wall = str(hit.get("wall_time") or "").strip()
+    if wall:
+        return wall[11:19] if len(wall) >= 19 else wall
+    frame = hit.get("frame_id")
+    return f"帧 {frame}" if frame is not None else "时间未知"
+
+
 @app.post("/api/v1/chat")
 def api_chat(request: ChatRequest):
     """时刻③和录像聊天：场景记忆检索（scene_index）→ 文本 LLM 合成回答 + 证据"""
@@ -1266,8 +1286,13 @@ def api_chat(request: ChatRequest):
                 out = {**out, "ok": True, "answer": cached, "source": "demo_cache"}
         out["search_mode"] = search.get("mode")
         out["evidence"] = [
-            {"video_time_sec": h.get("video_time_sec"), "task_id": h.get("task_id"),
-             "doc_type": h.get("doc_type"), "text": str(h.get("text", ""))[:120]}
+            {"video_time_sec": h.get("video_time_sec"), "time_label": _hit_time_label(h),
+             "task_id": h.get("task_id"), "doc_type": h.get("doc_type"),
+             "doc_type_cn": _DOC_TYPE_CN.get(h.get("doc_type"), h.get("doc_type", "")),
+             "label": h.get("alert_label") or _DOC_TYPE_CN.get(h.get("doc_type"), h.get("doc_type", "")),
+             "final_decision": h.get("final_decision", ""),
+             "summary": str(h.get("summary") or h.get("text", ""))[:120],
+             "text": str(h.get("text", ""))[:160]}
             for h in hits]
         return out
     except Exception as exc:

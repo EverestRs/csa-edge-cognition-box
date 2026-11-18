@@ -96,7 +96,8 @@ class NLAlertRuleEngine:
         self.rule_cooldown_seconds = float(max(0.0, cfg.get("rule_cooldown_seconds", 10.0)))
         self.default_min_confidence = float(min(1.0, max(0.1, cfg.get("default_min_confidence", 0.6))))
         self.max_image_px = int(cfg.get("max_image_px", 512))
-        self.max_latency_ms = int(cfg.get("max_latency_ms", 20000))
+        self.max_latency_ms = int(cfg.get("max_latency_ms", 60000))
+        self.use_images = bool(cfg.get("use_images", True))
         self.backoff_seconds = float(cfg.get("failure_backoff_seconds", 30))
 
         self.use_vllm = bool(vlm_config.get("use_vllm", False))
@@ -157,7 +158,7 @@ class NLAlertRuleEngine:
                     model=self.model_name,
                     prompt=PARSE_PROMPT.replace("{user_text}", text),
                     frames=None,
-                    max_tokens=300,
+                    max_tokens=160,
                     timeout=self.max_latency_ms / 1000.0,
                 )
                 parsed = parse_json_loose(out)
@@ -435,6 +436,8 @@ class NLAlertRuleEngine:
         budget：本轮最大调用次数（None=不限）。规则数超预算时按轮转游标分轮判定，
         保证每条规则最终都被覆盖——原型自写规则会持续增多，不能无限并发（ROADMAP Stage 2 前置）。
         """
+        if not self.use_images:
+            return []  # 纯文本 0.5B：开放规则不做视觉检查，闭集规则仍按行为标签匹配
         open_rules = [
             r for r in self.list_rules()
             if r.get("enabled", True)

@@ -32,6 +32,7 @@ class PoseEstimator:
         self._tensor_buffer: np.ndarray | None = None
         self.session_init_error = ""
         self.om_degraded_to_onnx = False  # OM 不可用回退 ONNX 时置 True（debug 可见）
+        self._is_om = False  # 当前 session 是否为固定 batch=1 的 Ascend OM
         self.session = self._build_session(self.onnx_path_resolved)
         self.is_real_model_loaded = self.session is not None
         # ImageNet mean/std（ViTPose/mmpose 预训练标准归一化，0-255 口径）
@@ -147,6 +148,13 @@ class PoseEstimator:
                     session_options.intra_op_num_threads = intra_threads
                 if inter_threads > 0:
                     session_options.inter_op_num_threads = inter_threads
+                # ORT 线程池默认自旋等待；姿态是低频调用（每 stride 帧一次），
+                # 自旋会在空档期白吃 CPU。关掉 intra/inter 自旋，让线程睡眠。
+                try:
+                    session_options.add_session_config_entry("session.intra_op.allow_spinning", "0")
+                    session_options.add_session_config_entry("session.inter_op.allow_spinning", "0")
+                except Exception:
+                    pass
                 session_options.enable_mem_pattern = bool(self.runtime_cfg.get("enable_mem_pattern", True))
                 session_options.enable_cpu_mem_arena = bool(self.runtime_cfg.get("enable_cpu_mem_arena", True))
                 return ort.InferenceSession(str(path), sess_options=session_options, providers=providers)
@@ -182,6 +190,7 @@ class PoseEstimator:
         adapter, err = ort_compatible_om_session(
             om_path, device_id=int(self.runtime_cfg.get("npu_device_id", 0)))
         if adapter is not None:
+            self._is_om = True
             return adapter
         self.session_init_error = f"om_unavailable: {err}"
         fallback = self._om_fallback_onnx(om_path)
@@ -475,6 +484,11 @@ class PoseEstimator:
     def infer_batch(self, frame: np.ndarray, tracks: list[dict]) -> list[list[list[float]]]:
         if not tracks:
             return []
+
+        # OM 输入是固定 batch=1；不能把 batch=2 塞进 batch=1 的 device buffer。
+        # 逐 track 复用单帧 infer()，ONNX 路径仍走批量推理。
+        if self._is_om:
+            return [self.infer(frame, track) for track in tracks]
 
         if self.session is None:
             return [self._filter_keypoints(self._fallback_keypoints(track)) for track in tracks]

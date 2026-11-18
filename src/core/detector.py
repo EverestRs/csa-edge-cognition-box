@@ -141,6 +141,12 @@ class Detector:
                     session_options.intra_op_num_threads = intra_threads
                 if inter_threads > 0:
                     session_options.inter_op_num_threads = inter_threads
+                # 低频调用模型关闭 ORT 线程池自旋，避免空档期白吃 CPU
+                try:
+                    session_options.add_session_config_entry("session.intra_op.allow_spinning", "0")
+                    session_options.add_session_config_entry("session.inter_op.allow_spinning", "0")
+                except Exception:
+                    pass
                 session_options.enable_mem_pattern = bool(self.runtime_cfg.get("enable_mem_pattern", True))
                 session_options.enable_cpu_mem_arena = bool(self.runtime_cfg.get("enable_cpu_mem_arena", True))
                 return ort.InferenceSession(str(path), sess_options=session_options, providers=providers)

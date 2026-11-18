@@ -25,6 +25,12 @@ class BackendUnavailable(RuntimeError):
     """后端不可用（缺依赖/加载失败）。内部使用，不越过 create_backend 边界。"""
 
 
+# 同一进程内 detector + pose 可能各建一个 AscendOMBackend；
+# pyACL 的 acl.init 不能重复调用，这里做进程级引用计数，只初始化一次。
+_ACL_INIT_LOCK = threading.Lock()
+_ACL_INIT_COUNT = 0
+
+
 # --------------------------------------------------------------------------- #
 # ONNX Runtime 后端
 # --------------------------------------------------------------------------- #
@@ -196,14 +202,18 @@ class AscendOMBackend:
         self._input_size = 0
         self._input_dtype = np.float32
         self._output_specs: list[tuple[int, np.dtype, tuple[int, ...]]] = []
+        self._acl_init_acquired = False
         try:
             self._load()
         except BackendUnavailable as exc:
             self.last_error = str(exc)
+            self._release_acl_init()
         except Exception as exc:  # pyACL 接口差异兜底：任何加载错误都不越界
             self.last_error = f"om_load_failed: {exc}"
+            self._release_acl_init()
 
     def _load(self) -> None:
+        global _ACL_INIT_COUNT
         try:
             import acl  # type: ignore
         except Exception as exc:
@@ -212,8 +222,12 @@ class AscendOMBackend:
             raise BackendUnavailable(f"om_file_missing: {self.path}")
 
         self._acl = acl
-        if acl.init() != 0:
-            raise BackendUnavailable("acl_init_failed")
+        with _ACL_INIT_LOCK:
+            if _ACL_INIT_COUNT == 0:
+                if acl.init() != 0:
+                    raise BackendUnavailable("acl_init_failed")
+            _ACL_INIT_COUNT += 1
+        self._acl_init_acquired = True
         acl.rt.set_device(self.device_id)
 
         # ── 加载（新旧约定自适应） ──
@@ -457,14 +471,31 @@ class AscendOMBackend:
             self.last_error = f"om_run_failed: {exc}"
             return []
 
+    def _release_acl_init(self) -> None:
+        """释放本后端的 acl.init 引用；最后一个后端释放时才 reset/finalize。"""
+        global _ACL_INIT_COUNT
+        if not getattr(self, "_acl_init_acquired", False):
+            return
+        with _ACL_INIT_LOCK:
+            if _ACL_INIT_COUNT > 0:
+                _ACL_INIT_COUNT -= 1
+            last = _ACL_INIT_COUNT == 0
+        self._acl_init_acquired = False
+        if last and self._acl is not None:
+            try:
+                self._acl.rt.reset_device(self.device_id)
+                self._acl.finalize()
+            except Exception:
+                pass
+
     def unload(self) -> None:
         try:
             with self._buf_lock:
                 self._free_buffers()
             if self._acl is not None and self._model_id is not None:
                 self._acl.mdl.unload(self._model_id)
-                self._acl.rt.reset_device(self.device_id)
-                self._acl.finalize()
+                self._model_id = None
+            self._release_acl_init()
         except Exception:
             pass
         self.is_real = False
@@ -537,7 +568,7 @@ class OMSessionAdapter:
         self.last_error = ""
 
     def get_inputs(self) -> list[_TensorMeta]:
-        shape = tuple(self._backend.input_shape or ())
+        shape = tuple(getattr(self._backend, "_input_shape", None) or ())
         return [_TensorMeta(getattr(self._backend, "input_name", "input") or "input", shape)]
 
     def get_outputs(self) -> list[_TensorMeta]:
