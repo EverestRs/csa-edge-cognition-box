@@ -15,9 +15,10 @@
 | 端到端整机吞吐 | 9.72 fps | throughput 档全链路（软解+4核 CPU 为瓶颈） | `evidence/edge_test/throughput_npu_20261111.json` |
 | 演示档流畅度 | 事件 7.42fps，557/557 事件含检测框，0 次 >1s 卡顿 | edge 档（行为/语言层全开） | `evidence/edge_test/demo_fluency_20261111_v3.json` |
 | 检测器 OM 单帧 | 22.7ms | YOLOv8n FP16 OM | `evidence/edge_m0/g3_om_bench*.json` |
+| 姿态 OM 单人 | **23.2ms**（vs FP32 ONNX 519ms / int8 CPU 239ms） | ViTPose-S FP16 OM@NPU，batch=1 逐 track；parity max_abs 0.0005 / cos 0.99999 | `docs/DEMO_DAY_RUNBOOK.md §8.8` |
 | 灰区复核 crop OM | 4.2ms | crop_v1 OM | `evidence/edge_m0/g4_crop_om.json` |
 | 板级功耗 | 空闲 7.15W / 推理 8.29W / 推理+LLM 8.39W | 三档各 60s @1Hz 采样 | `evidence/edge_test/power_three_modes_20261116.json` |
-| 场景问答延迟 | 0.5B LLM p50 4–9.8s（异步+预置兜底） | Qwen2.5-0.5B INT4 | `docs/TECHNICAL_REPORT.md` |
+| 场景问答延迟 | 0.5B LLM 单条 12–51s（异步；超时回退检索摘要） | Qwen2.5-0.5B INT4（llama.cpp，CPU） | `docs/DEMO_DAY_RUNBOOK.md §8.11` |
 
 > 注：60.3fps 是 NPU 器件上限，9.72fps 是整机端到端，造成差距的原因是 A55 软解码和后处理上（AICore 只用到 43.9%）。
 
@@ -25,7 +26,7 @@
 
 ```
 摄像头 (H.264 RTSP) → Atlas 200I DK A2 (310B4, 4GB, ≤20W)
-  L1 感知：解码(cv/ffmpeg) → YOLOv8n OM@NPU → ByteTrack → ViTPose → PoseClassifier
+  L1 感知：解码(cv/ffmpeg) → YOLOv8n OM@NPU → ByteTrack → ViTPose FP16 OM@NPU → PoseClassifier(CPU)
                         └→ Crop 多分类器 OM（灰区复核）
   L2 决策：三级分流（高采纳 / 灰区仲裁 / 低兜底）+ 时序平滑 + 规则引擎
   L3 语言：Qwen2.5-0.5B INT4（llama.cpp）→ 布控解析 / 事实旁白 / 场景问答
@@ -91,11 +92,12 @@ curl -X POST localhost:8000/api/v1/analyze/stream \
 | Ultralytics YOLOv8n | 人体检测模型与训练 | AGPL-3.0（见下） |
 | Qwen2.5-0.5B-Instruct | 语言层（布控/旁白/问答） | Apache-2.0 |
 | llama.cpp | LLM 推理 | MIT |
-| ViTPose-S | 133 关键点姿态 | 以原仓库为准 |
+| ViTPose-S | 133 关键点姿态（FP16 OM@NPU） | 以原仓库为准（上游 ViTPose 为 Apache-2.0） |
+| PoseClassifier | 行为分类（仍 ONNX CPU，107MB OM 板端转换未过） | 自研 |
 | bge-small-zh-v1.5 | 场景检索嵌入 | MIT |
 | 华为 CANN / pyACL | NPU 编译与推理 | 华为软件许可 |
 
-自研部分（分层认知架构、三级决策与 stride/门控调度、断流自愈、端云链路、看板等）版权归慧眼智警团队所有，以专有许可发布（`LICENSE`，保留所有权利）。YOLOv8n 编译得到的 `.om` 权重随仓库分发仅为复现实测，其源码与权重版权归 Ultralytics；如将整体闭源分发，需替换为宽松许可检测模型或取得商业授权。
+自研部分（分层认知架构、三级决策与 stride/门控调度、断流自愈、端云链路、看板等）版权归慧眼智警团队所有，以专有许可发布（`LICENSE`，保留所有权利）。随仓库分发的 `.om` 权重（YOLOv8n 检测、crop 复核）均由对应 ONNX 经 CANN ATC 编译而来，仅为复现实测：YOLOv8n 源码与权重版权归 Ultralytics（AGPL-3.0），如将整体闭源分发，需替换为宽松许可检测模型或取得商业授权；crop 权重按自研 MIT 许可随包分发。ViTPose-S 姿态 FP16 OM 体积较大（53MB），改由 GitHub Release 分发，获取方式见 `scripts/download_models.sh`；其上游 ViTPose 权重按 Apache-2.0 许可。
 
 ## 隐私声明
 

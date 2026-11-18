@@ -4,8 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# ↓↓↓ 建仓后把 OWNER 替换为你的 GitHub 用户名/组织，并在 Release 页上传同名文件 ↓↓↓
-OWNER="OWNER/csa-edge-cognition-box"
+# GitHub Release 归属仓库；同名 Tag=v1.0.0-models 下已上传 4 个权重文件
+OWNER="EverestRs/csa-edge-cognition-box"
 TAG="v1.0.0-models"
 BASE="https://github.com/${OWNER}/releases/download/${TAG}"
 
@@ -13,6 +13,7 @@ mkdir -p models/detector models/pose models/action_v2 models/embedding
 
 echo "[1/4] 自研/导出中间权重（GitHub Release）"
 curl -fL --retry 3 -o models/pose/vitpose_wholebody_s.onnx        "${BASE}/vitpose_wholebody_s.onnx"
+curl -fL --retry 3 -o models/pose/vitpose_wholebody_s_fp16_bs1.om "${BASE}/vitpose_wholebody_s_fp16_bs1.om"
 curl -fL --retry 3 -o models/action_v2/pose_classifier.onnx        "${BASE}/pose_classifier.onnx"
 curl -fL --retry 3 -o models/detector/yolov8n.onnx                 "${BASE}/yolov8n.onnx"
 
@@ -25,7 +26,8 @@ mkdir -p ~/models/llm
 modelscope download --model Qwen/Qwen2.5-0.5B-Instruct-GGUF \
   --include '*q4_0*' --local_dir ~/models/llm
 
-echo "[4/4] 校验演示主路径 OM（应已随 git 提交，无需下载）"
-ls -l models/detector/yolov8n.om models/crop/crop_v1.om
+echo "[4/4] 校验 OM 到位"
+# detector/crop 两个小 OM 随 git 提交；pose FP16 bs1 OM 由本脚本从 GitHub Release 拉取
+ls -l models/detector/yolov8n.om models/crop/crop_v1.om models/pose/vitpose_wholebody_s_fp16_bs1.om
 
 echo "完成。OM 缺失或需重编译时：tools/export_om_atlas.sh（需 CANN 6.2.T2）"

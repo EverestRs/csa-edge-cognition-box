@@ -18,6 +18,8 @@ models/**/*.bin
 models/**/*.safetensors
 models/embedding/
 *.gguf
+# 姿态 FP16 bs1 OM 走 GitHub Release，不入库（detector/crop 两个小 OM 已提交，不受影响）
+models/pose/*.om
 
 # 交付物本身
 *.zip
