@@ -19,7 +19,7 @@
 | 板级功耗 | 空闲 7.15W / 推理 8.29W / 推理+LLM 8.39W | 三档各 60s @1Hz 采样 | `evidence/edge_test/power_three_modes_20261116.json` |
 | 场景问答延迟 | 0.5B LLM p50 4–9.8s（异步+预置兜底） | Qwen2.5-0.5B INT4 | `docs/TECHNICAL_REPORT.md` |
 
-> 口径说明：60.3fps 是 NPU 器件上限，9.72fps 是整机端到端，差距卡在 A55 软解码和后处理上（AICore 只用到 43.9%）。两个数都是实测，别混着引用。
+> 注：60.3fps 是 NPU 器件上限，9.72fps 是整机端到端，造成差距的原因是 A55 软解码和后处理上（AICore 只用到 43.9%）。
 
 ## 系统架构
 
