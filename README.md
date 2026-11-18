@@ -19,7 +19,7 @@
 | 板级功耗 | 空闲 7.15W / 推理 8.29W / 推理+LLM 8.39W | 三档各 60s @1Hz 采样 | `evidence/edge_test/power_three_modes_20261116.json` |
 | 场景问答延迟 | 0.5B LLM p50 4–9.8s（异步+预置兜底） | Qwen2.5-0.5B INT4 | `docs/TECHNICAL_REPORT.md` |
 
-> 口径说明：60.3fps 是 NPU 器件上限，9.72fps 是整机端到端（瓶颈在 A55 软解码+后处理，AICore 仅用 43.9%）。两者均为实测值，引用时请注明口径。
+> 口径说明：60.3fps 是 NPU 器件上限，9.72fps 是整机端到端，差距卡在 A55 软解码和后处理上（AICore 只用到 43.9%）。两个数都是实测，别混着引用。
 
 ## 系统架构
 
@@ -95,7 +95,7 @@ curl -X POST localhost:8000/api/v1/analyze/stream \
 | bge-small-zh-v1.5 | 场景检索嵌入 | MIT |
 | 华为 CANN / pyACL | NPU 编译与推理 | 华为软件许可 |
 
-自研部分（分层认知架构、三级决策与 stride/门控调度、断流自愈、端云链路、看板等）以 MIT 许可发布（`LICENSE`）。YOLOv8n 编译得到的 `.om` 权重随仓库分发仅为复现实测，其源码与权重版权归 Ultralytics；如将整体闭源分发，需替换为宽松许可检测模型或取得商业授权。
+自研部分（分层认知架构、三级决策与 stride/门控调度、断流自愈、端云链路、看板等）版权归慧眼智警团队所有，以专有许可发布（`LICENSE`，保留所有权利）。YOLOv8n 编译得到的 `.om` 权重随仓库分发仅为复现实测，其源码与权重版权归 Ultralytics；如将整体闭源分发，需替换为宽松许可检测模型或取得商业授权。
 
 ## 隐私声明
 
@@ -105,5 +105,5 @@ curl -X POST localhost:8000/api/v1/analyze/stream \
 
 ## 说明
 
-- 本仓库为参赛作品的开源交付物；`evidence/` 内数字与提交材料一致，欢迎复核。
+- 本仓库为参赛作品的公开交付物；`evidence/` 内数字与提交材料一致，欢迎复核。
 - 演示视频（B站）链接：https://www.bilibili.com/video/BV1pFsr6DEPb/
