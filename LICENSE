@@ -1,28 +1,30 @@
-MIT License
+版权所有（Copyright © 2026 慧眼智警团队 (CSA Edge Team)）
 
-Copyright (c) 2026 慧眼智警团队 (CSA Edge Team)
+All Rights Reserved（保留所有权利）
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+本软件（含源代码、文档、配置、脚本及仓库内其他原创内容）的著作权归
+慧眼智警团队 (CSA Edge Team) 所有。未经版权所有者事先书面许可，任何人不得：
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. 复制、分发、传播本软件的全部或任何部分；
+2. 修改、翻译、改编或基于本软件进行二次开发；
+3. 将本软件用于任何商业用途，包括但不限于销售、出租、许可或集成入商业产品；
+4. 以任何形式公开发表、展示本软件的衍生作品。
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+仅在下列条件下，允许对本仓库进行免许可的有限使用：
+
+1. 仅出于代码审查、学术研究、评审核验目的查阅本仓库内容；
+2. 不得移除或修改本版权声明；
+3. 不得将本软件用于上述受限用途之外的任何其他用途。
+
+本软件按"现状"提供，不附带任何明示或默示的保证，包括但不限于适销性、
+特定用途适用性和非侵权的保证。在任何情况下，版权所有者不对因使用本软件
+而产生的任何索赔、损害或其他责任负责。
+
+如需获取使用许可（含商用许可），请联系版权所有者。
 
 ---
 
 Third-party components are distributed under their own licenses.
 See SUBMISSION/作品介绍.md section 7 and the upstream repositories.
 Note: Ultralytics YOLOv8 is licensed under AGPL-3.0; model weights and
-derived artifacts are not covered by the MIT license above.
+derived artifacts are not covered by the license above.

@@ -106,4 +106,4 @@ curl -X POST localhost:8000/api/v1/analyze/stream \
 ## 说明
 
 - 本仓库为参赛作品的开源交付物；`evidence/` 内数字与提交材料一致，欢迎复核。
-- 演示视频（B站）链接：待上传后回填。
+- 演示视频（B站）链接：https://www.bilibili.com/video/BV1pFsr6DEPb/
